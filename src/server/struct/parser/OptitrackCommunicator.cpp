@@ -65,20 +65,31 @@ void OptitrackCommunicator::updateArray(std::string rawData)
 		while (std::getline(ss1, line, '\n'))
 		{
 			std::stringstream ss2(line);
-			std::string ID, X, Y, theta;
+			std::string ID_s, X_s, Y_s, theta_s;
+			int ID;
+			float X, Y, theta;
 
-			// TODO: Implement
 			// ID
-			getline(ss2, ID, ',');
+			std::getline(ss2, ID_s, ',');
+			ID = stoi(ID_s);
 
 			// X
-			getline(ss2, X, ',');
+			std::getline(ss2, X_s, ',');
+			X = stof(X_s);
 
 			// Y
-			getline(ss2, Y, ',');
+			std::getline(ss2, Y_s, ',');
+			Y = stof(Y_s);
 
 			// Theta
-			getline(ss2, theta, ',');
+			std::getline(ss2, theta_s, ',');
+			theta = stof(theta_s);
+			
+			poseArr[ID].first.x = X;
+			poseArr[ID].first.y = Y;
+
+			Direction2D dir = Direction2D::radianToVector(theta);
+			poseArr[ID].second = dir;
 		}
 	}
 }
