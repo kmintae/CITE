@@ -25,6 +25,9 @@ Instruction::Instruction(InstructionType instType, float* param)
 	case InstructionType::MOV:
 		paramCnt = MOV_PARAM; // (cur_pos_x, cur_pos_y, cur_dir_x, cur_dir_y)
 		break;
+	case InstructionType::MVL:
+		paramCnt = MVL_PARAM; // (cur_pos_x, cur_pos_y, cur_dir_x, cur_dir_y)
+		break;
 	case InstructionType::DCN:
 		paramCnt = DCN_PARAM;
 		break;
@@ -84,6 +87,9 @@ std::string Instruction::toString()
 		break;
 	case InstructionType::MOV:
 		instRaw = "MOV";
+		break;
+	case InstructionType::MVL:
+		instRaw = "MVL";
 		break;
 	case InstructionType::DCN:
 		instRaw = "DCN";

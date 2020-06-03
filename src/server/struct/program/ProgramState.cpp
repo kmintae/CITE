@@ -235,7 +235,7 @@ void ProgramState::workSession(Client* client)
 			finalPose = robot->getFinalPose();
 
 			// 2-2-1. Check if Current Pose == Final Pose: Send HLT, change phase to GRAB, and break
-			if (pose == finalPose) { // Current Pose == Final Pose
+			if (Position2D::isNearest(pose.first, finalPose.first) && Direction2D::isSimilar(pose.second, finalPose.second)) {
 				// Send HLT
 				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
@@ -254,10 +254,25 @@ void ProgramState::workSession(Client* client)
 				break;
 			}
 			// 2-2-1-Extra. Check if Dist (Current Pose_Pos, Final Pose_Pos) <= GRID_SIZE: Send MVL Instruction
-			// TODO: Implement
+			if (Position2D::isNear(pose.first, finalPose.first)) {
+				param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
+
+				bytes_send = send(sock, Instruction(InstructionType::MVL, param).toString().c_str(), MAX_BUFF_SIZE, 0);
+				if (bytes_send == SOCKET_ERROR) {
+					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
+
+					delete client; // closeSocket + De-allocation
+					client = new Client();
+					grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+					ProgramState::connClientNum--;
+					return;
+				}
+				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				break;
+			}
 
 			// 2-2-2. Check if Current Pose == Keypoint: Send HLT, Pathfinding, Send PID, Receive DONE/ERROR, and break
-			if (pose == keypoint) { // Current Pose == Keypoint
+			if (Position2D::isNearest(pose.first, keypoint.first) && Direction2D::isSimilar(pose.second, keypoint.second)) { // Current Pose == Keypoint
 				// Send HLT
 				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
@@ -401,7 +416,7 @@ void ProgramState::workSession(Client* client)
 			finalPose = robot->getFinalPose();
 
 			// 2-4-1. Check if Current Pose == Final Pose: Send HLT, and change phase to RLZ
-			if (pose == finalPose) { // Current Pose == Final Pose
+			if (Position2D::isNearest(pose.first, finalPose.first) && Direction2D::isSimilar(pose.second, finalPose.second)) { // Current Pose == Final Pose
 				// Send HLT
 				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
@@ -422,11 +437,25 @@ void ProgramState::workSession(Client* client)
 			}
 
 			// 2-4-1-Extra. Check if Dist (Current Pose_Pos, Final Pose_Pos) <= GRID_SIZE: Send MVL Instruction
-			// TODO: Implement
-			
+			if (Position2D::isNear(pose.first, finalPose.first)) {
+				param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
+
+				bytes_send = send(sock, Instruction(InstructionType::MVL, param).toString().c_str(), MAX_BUFF_SIZE, 0);
+				if (bytes_send == SOCKET_ERROR) {
+					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
+
+					delete client; // closeSocket + De-allocation
+					client = new Client();
+					grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+					ProgramState::connClientNum--;
+					return;
+				}
+				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				break;
+			}
 
 			// 2-4-2. Check if Current Pose == Keypoint: Send HLT, Send PID, Receive DONE/ERROR
-			if (pose == keypoint) { // Current Pose == Keypoint
+			if (Position2D::isNearest(pose.first, keypoint.first) && Direction2D::isSimilar(pose.second, keypoint.second)) { // Current Pose == Keypoint
 				// Send HLT
 				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);

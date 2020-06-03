@@ -114,7 +114,7 @@ std::pair<int, std::pair<Position2D, Direction2D>> OptitrackCommunicator::getCon
 	for (int i = 0; i < maxRobotLimit; i++)
 	{
 		if (prevPoseArr[i].first != poseArr[i].first) continue;
-		if ((poseArr[i].second - prevPoseArr[i].second) == Direction2D::radianToVector(CAL_ROT_DEG * 3.141592 / 180.0)) {
+		if (Direction2D::isSimilar(poseArr[i].second - prevPoseArr[i].second, Direction2D::radianToVector(CAL_ROT_DEG * 3.141592 / 180.0))) {
 			if (result != -1) break;
 			else result = i;
 		}

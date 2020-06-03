@@ -15,6 +15,7 @@
 #define HLT_PARAM 0
 #define CAL_PARAM 0
 #define MOV_PARAM 4
+#define MVL_PARAM 4
 #define PID_PARAM 8
 #define GRB_PARAM 3
 #define RLZ_PARAM 3
@@ -26,6 +27,7 @@ enum class InstructionType
 	HLT,
 	CAL,
 	MOV,
+	MVL,
 	PID,
 	GRB,
 	RLZ,
