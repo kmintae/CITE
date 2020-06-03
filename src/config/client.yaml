@@ -1,0 +1,54 @@
+# Server IP Address
+SERVER_IP_ADDR: 127.0.0.1 # Temp
+SERVER_PORT: 8080
+
+# Maximum buffer size
+MAX_BUF_SIZE: 1024
+
+# ---- Robot Arm Configuration ----
+# Robot Number (Starts from 0)
+ROBOT_ARM_NUM: 0
+
+# Color of Sticker for CV Detection (RGB)
+ROBOT_ARM_COLOR: [240, 0, 0]
+
+# GPIO Pins
+## GPIO[0] : Up-LEFT / GPIO[1] : Up-RIGHT
+## GPIO[2] : Down-LEFT / GPIO[3] : Down-RIGHT
+GPIO_WHEEL_DIRPINS: [19, 27, 5, 23] # GPIO DIR PINS
+GPIO_WHEEL_STPPINS: [26, 22, 6, 24] # GPIO STEPPER PINS
+
+GPIO_ARM_DIRPINS: [0, 0, 0] # GPIO DIR PINS
+GPIO_ARM_STPPINS: [0, 0, 0] # GPIO STEPPER PINS
+
+GPIO_SERVO_PIN: 0 # GPIO DIR PINS
+
+# C_Motor Configurations
+MOTOR_WHEEL_ANG_PER_SEC: 1.8
+MOTOR_WHEEL_GEAR: 1.0
+# C_Motor Configurations
+MOTOR_ARM_ANG_PER_SEC: 0.425
+MOTOR_ARM_GEAR: 10.0
+
+# Default Max Velocity for each operation
+VEL_DEFAULT_MAX_FORWARD: 1.5
+VEL_DEFAULT_MAX_RIGHT: 1.5
+VEL_DEFAULT_MAX_ROTATION: 1.5
+
+# Fixed Initial Position (cm)
+## Only for CITD III, Fixed Initial Position for Trajectory Seperation
+INIT_POS: [15.0, 0.0]
+
+#Robot Arm config for initialize and motion control
+ROBOTARM_L1 : 145
+ROBOTARM_L2 : 180
+ROBOTARM_MAX_ANGLES : [200.0,200.0,360.0]
+ROBOTARM_MIN_ANGLES : [-1.0,-1.0,-1.0]
+
+
+#ROBOT Arm Postions for stacking and lifting
+ROBOTARM_INITIAL_POSITION : [49.0, -5.0]
+ROBOT_ARM_POSITION_BEFORE_WORK: 200.0
+ROBOT_ARM_MOVING_POSITION : [70.0,100.0]
+
+# ---- Robot Arm Configuration ----
