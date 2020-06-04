@@ -11,6 +11,8 @@ Client::Client()
 	robot = NULL;
 
 	phase = ClientPhase::DISCONNECTED;
+
+	connectedHistory = false;
 }
 
 Client::~Client()

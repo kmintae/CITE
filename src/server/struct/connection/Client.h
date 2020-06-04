@@ -26,6 +26,8 @@ private:
 	SOCKADDR_IN sock_in;
 
 public:
+	bool connectedHistory;
+
 	std::thread clientThread;
 	ClientPhase phase;
 

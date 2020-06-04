@@ -90,4 +90,7 @@ public:
 
 	// Emergency Stop
 	void makeStop();
+
+
+	void workSession_Test(Client* client); // Tests
 };

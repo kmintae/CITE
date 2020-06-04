@@ -39,18 +39,20 @@ Instruction::Instruction(InstructionType instType, float* param)
 	case InstructionType::RLZ:
 		paramCnt = RLZ_PARAM; //  brickpos_x, brickpos_y, brickpos_z
 		break;
-	case InstructionType::CAL:
-		paramCnt = CAL_PARAM;
-		break;
 	case InstructionType::PID:
 		paramCnt = PID_PARAM; // curPos, curDir, keypointPos, keypointDir
+		break;
+
+
+	// Tests
+	case InstructionType::SET:
+		paramCnt = SET_PARAM; // curPos, curDir, keypointPos, keypointDir
 		break;
 	}
 
 	// Parameter Deep Copy
 	for (int i = 0; i < paramCnt; i++) {
 		(this->param)[i] = param[i];
-		paramCnt++;
 	}
 }
 Instruction::Instruction(Instruction const& inst)
@@ -102,11 +104,13 @@ std::string Instruction::toString()
 	case InstructionType::RLZ:
 		instRaw = "RLZ";
 		break;
-	case InstructionType::CAL:
-		instRaw = "CAL";
-		break;
 	case InstructionType::PID:
 		instRaw = "PID";
+		break;
+
+	// Tests
+	case InstructionType::SET:
+		instRaw = "SET";
 		break;
 	}
 

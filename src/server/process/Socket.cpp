@@ -29,12 +29,18 @@ void serverSocket(ProgramState* programState)
 	int i = 1;
 	setsockopt(hListen, SOL_SOCKET, SO_REUSEADDR, (char*)&i, sizeof(i));
 
-	bind(hListen, (SOCKADDR*)&tListenAddr, sizeof(tListenAddr));
+	if (bind(hListen, (SOCKADDR*)&tListenAddr, sizeof(tListenAddr)) == SOCKET_ERROR) {
+		fprintf(stderr, "Binding Failed\n");
+		return;
+	}
 
 	int maxRobotLimit;
 	maxRobotLimit = GetPrivateProfileInt("connection", "MAX_ROBOT_CONNECTED", 2, "../config/server.ini");
 	
-	listen(hListen, maxRobotLimit);
+	if (listen(hListen, maxRobotLimit) == SOCKET_ERROR) {
+		fprintf(stderr, "Listen Failed\n");
+		return;
+	}
 
 	// Using As Blocking Mode: Multi-Threading
 

@@ -105,6 +105,7 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 	// 2. OptitrackCommunicator (Position Data)
 	std::pair<Vector2D, Vector2D>* poseArr = optitrackCommunicator->getPoseArray();
 	for (int i = 0; i < maxRobotNum; i++) {
+		if (clients[i]->connectedHistory == false) continue;
 		Vector2D robotPos = poseArr[i].first;
 		for (int k = (((robotPos.y - robotBorder - 1) / grid_len >= 0) ? (robotPos.y - robotBorder - 1) / grid_len : 0);
 			k <= (((robotPos.y + robotBorder + 1) / grid_len <= (limit_y - 1) / grid_len) ? (robotPos.y + robotBorder + 1) / grid_len : (limit_y - 1) / grid_len);

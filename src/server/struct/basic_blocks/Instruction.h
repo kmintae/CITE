@@ -13,7 +13,6 @@
 #define MAX_INST_PARAM 8
 
 #define HLT_PARAM 0
-#define CAL_PARAM 0
 #define MOV_PARAM 4
 #define MVL_PARAM 4
 #define PID_PARAM 8
@@ -21,17 +20,22 @@
 #define RLZ_PARAM 3
 #define DCN_PARAM 0
 
+ // For Tests
+#define SET_PARAM 8
+
 enum class InstructionType
 {
 	ERR,
 	HLT,
-	CAL,
 	MOV,
 	MVL,
 	PID,
 	GRB,
 	RLZ,
-	DCN
+	DCN,
+
+	// For Tests
+	SET
 };
 
 class Instruction
