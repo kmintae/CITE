@@ -15,8 +15,10 @@
 #include <WinSock2.h>
 #include <Windows.h>
 
+#pragma comment(lib,"ws2_32")
+
 #define MAX_UDP_BUFF_SIZE 512
 
-void UDPSocket(SOCKET& udpSocket);
+void UDPSocket(WSAData& wsaData, SOCKET& udpSocket);
 
-std::string fetchOptitrackData(SOCKET& udpSocket);
+int fetchOptitrackData(SOCKET& udpSocket, std::string& data);

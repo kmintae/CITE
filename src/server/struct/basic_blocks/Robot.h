@@ -39,12 +39,12 @@ public:
 	int getRobotNum();
 
 	void setPose(const std::pair<Vector2D, Vector2D> &pose);
-	std::pair<Vector2D, Vector2D>& getPose();
+	std::pair<Vector2D, Vector2D> getPose();
 	void setPath(const std::vector<std::pair<Vector2D, Vector2D>>& path);
-	std::vector<std::pair<Vector2D, Vector2D>>& getPath();
-	std::pair<Vector2D, Vector2D>& getKeypoint();
+	std::vector<std::pair<Vector2D, Vector2D>> getPath();
+	std::pair<Vector2D, Vector2D> getKeypoint();
 	
-	std::pair<Vector2D, Vector2D>& getFinalPose();
+	std::pair<Vector2D, Vector2D> getFinalPose();
 
 	Brick* getSourceBrick();
 	Brick* getDestinationBrick();

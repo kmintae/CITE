@@ -6,8 +6,9 @@
 
 #include "OptitrackCommunicate.h"
 
-void UDPSocket(SOCKET &udpSocket)
+void UDPSocket(WSAData &wsaData, SOCKET &udpSocket)
 {
+	WSAStartup(MAKEWORD(2, 2), &wsaData);
 	udpSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	int port;
 	port = GetPrivateProfileInt("connection", "UDP_PORT", -1, "../config/server.ini");
@@ -27,13 +28,18 @@ void UDPSocket(SOCKET &udpSocket)
 		closesocket(udpSocket);
 		return;
 	}
+	char request[MAX_UDP_BUFF_SIZE] = "Request";
+	if (send(udpSocket, request, MAX_UDP_BUFF_SIZE, 0) == SOCKET_ERROR) {
+		fprintf(stderr, "UDP Connect() Error\n");
+		closesocket(udpSocket);
+		return;
+	}
 }
 
-std::string fetchOptitrackData(SOCKET& udpSocket)
+int fetchOptitrackData(SOCKET& udpSocket, std::string &data)
 {
-	char request[MAX_UDP_BUFF_SIZE] = "Request";
 	char buff[MAX_UDP_BUFF_SIZE];
-	if (send(udpSocket, request, MAX_UDP_BUFF_SIZE, 0) == SOCKET_ERROR) return "";
-	if (recv(udpSocket, buff, MAX_UDP_BUFF_SIZE, 0) == SOCKET_ERROR) return "";
-	return std::string(buff);
+	if (recv(udpSocket, buff, MAX_UDP_BUFF_SIZE, 0) == SOCKET_ERROR) return SOCKET_ERROR;
+	data = std::string(buff);
+	return 0;
 }

@@ -8,4 +8,8 @@
 #include <WinSock2.h>
 #include <Windows.h>
 
+#include "process/Socket.h"
+
+#include "struct/program/ProgramState.h"
+
 #pragma comment(lib,"ws2_32")

@@ -38,10 +38,10 @@ public:
     void setPos(float x, float y, float z);
     void setDir(float x, float y, float z);
 
-    Vector2D& getPos2D();
-    Vector3D& getPos3D();
-    Vector2D& getDir2D();
-    Vector3D& getDir3D();
+    Vector2D getPos2D();
+    Vector3D getPos3D();
+    Vector2D getDir2D();
+    Vector3D getDir3D();
 
     bool operator <(const Brick& b2);
     bool operator >(const Brick& b2);

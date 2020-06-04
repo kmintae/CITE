@@ -28,25 +28,36 @@ Grid::Grid(std::mutex* mtx, std::condition_variable* cv)
 	y = (limit_y / grid_len + 2);
 
 	// Dynamic Allocation
-	grid = new bool* [y];
+	grid_bool = new bool* [y];
 	
-	for (int i = 0; i < y; i++) grid[i] = new bool[x];
+	for (int i = 0; i < y; i++) grid_bool[i] = new bool[x];
+
+	// Initialization
+	for (int i = 0; i < y; i++) {
+		for (int j = 0; j < x; j++) {
+			grid_bool[i][j] = false;
+		}
+	}
 }
 
 Grid::~Grid()
 {
-	for (int i = 0; i < y; i++) delete [] grid[i];
-	delete[] grid;
+	for (int i = 0; i < y; i++) delete [] grid_bool[i];
+	delete[] grid_bool;
 }
 
 bool** Grid::getGrid()
 {
-	return grid;
+	return grid_bool;
 }
 
 void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitrackCommunicator, Client** clients)
 {
-	// TODO: DRAW GRID! (BrickList, Optitrack Infos, Client List (Path))
+	// DRAW GRID! (BrickList, Optitrack Infos, Client List (Path))
+	for (int i = 0; i < y; i++) {
+		for (int j = 0; j < x; j++) grid_bool[i][j] = false;
+	}
+
 	// 1. BrickLayerList
 	std::vector<BrickLayer*> srcBrickLayerList = brickLayerList->getSrcBrickLayerList();
 	std::vector<BrickLayer*> dstBrickLayerList = brickLayerList->getDstBrickLayerList();
@@ -54,14 +65,19 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 	for (int i = 0; i < srcBrickLayerList.size(); i++) {
 		std::vector<Brick*>& srcBrickList = srcBrickLayerList[i]->getBrickList();
 		for (int j = 0; j < srcBrickList.size(); j++) {
-			Vector2D& brickPos = srcBrickList[i]->getPos2D();
+			if (srcBrickList[j]->getPhase() == BrickPhase::DONE ||
+				srcBrickList[j]->getPhase() == BrickPhase::RELEASED) continue;
+			
+			Vector2D brickPos = srcBrickList[j]->getPos2D();
 			for (int k = (((brickPos.y - brickBorder - 1) / grid_len >= 0) ? (brickPos.y - brickBorder - 1) / grid_len : 0);
 				k <= (((brickPos.y + brickBorder + 1) / grid_len <= (limit_y - 1) / grid_len) ? (brickPos.y + brickBorder + 1) / grid_len : (limit_y - 1) / grid_len);
 				k++) {
 				for (int l = (((brickPos.x - brickBorder - 1) / grid_len >= 0) ? (brickPos.x - brickBorder - 1) / grid_len : 0);
 					l <= (((brickPos.x + brickBorder + 1) / grid_len <= (limit_x - 1) / grid_len) ? (brickPos.x + brickBorder + 1) / grid_len : (limit_x - 1) / grid_len);
 					l++) {
-					if (Vector2D::calculateDistance(Vector2D(l, k), brickPos) < brickBorder) grid[k][l] = true;
+					// TODO: (l,, k)) พฦดิ
+					Vector2D newVect = Vector2D(l * grid_len, k * grid_len);
+					if (Vector2D::calculateDistance(newVect, brickPos) < brickBorder) grid_bool[k][l] = true;
 				}
 			}
 		}
@@ -70,14 +86,17 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 	for (int i = 0; i < dstBrickLayerList.size(); i++) {
 		std::vector<Brick*>& dstBrickList = dstBrickLayerList[i]->getBrickList();
 		for (int j = 0; j < dstBrickList.size(); j++) {
-			Vector2D& brickPos = dstBrickList[i]->getPos2D();
+			if (dstBrickList[j]->getPhase() != BrickPhase::DONE) continue;
+			
+			Vector2D brickPos = dstBrickList[j]->getPos2D(); // Should not be reference typed
 			for (int k = (((brickPos.y - brickBorder - 1) / grid_len >= 0) ? (brickPos.y - brickBorder - 1) / grid_len : 0);
 				k <= (((brickPos.y + brickBorder + 1) / grid_len <= (limit_y - 1) / grid_len) ? (brickPos.y + brickBorder + 1) / grid_len : (limit_y - 1) / grid_len);
 				k++) {
 				for (int l = (((brickPos.x - brickBorder - 1) / grid_len >= 0) ? (brickPos.x - brickBorder - 1) / grid_len : 0);
 					l <= (((brickPos.x + brickBorder + 1) / grid_len <= (limit_x - 1) / grid_len) ? (brickPos.x + brickBorder + 1) / grid_len : (limit_x - 1) / grid_len);
 					l++) {
-					if (Vector2D::calculateDistance(Vector2D(l, k), brickPos) < brickBorder) grid[k][l] = true;
+					Vector2D newVect = Vector2D(l * grid_len, k * grid_len);
+					if (Vector2D::calculateDistance(newVect, brickPos) < brickBorder) grid_bool[k][l] = true;
 				}
 			}
 		}
@@ -86,14 +105,15 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 	// 2. OptitrackCommunicator (Position Data)
 	std::pair<Vector2D, Vector2D>* poseArr = optitrackCommunicator->getPoseArray();
 	for (int i = 0; i < maxRobotNum; i++) {
-		Vector2D& robotPos = poseArr[i].first;
+		Vector2D robotPos = poseArr[i].first;
 		for (int k = (((robotPos.y - robotBorder - 1) / grid_len >= 0) ? (robotPos.y - robotBorder - 1) / grid_len : 0);
 			k <= (((robotPos.y + robotBorder + 1) / grid_len <= (limit_y - 1) / grid_len) ? (robotPos.y + robotBorder + 1) / grid_len : (limit_y - 1) / grid_len);
 			k++) {
 			for (int l = (((robotPos.x - robotBorder - 1) / grid_len >= 0) ? (robotPos.x - robotBorder - 1) / grid_len : 0);
 				l <= (((robotPos.x + robotBorder + 1) / grid_len <= (limit_x - 1) / grid_len) ? (robotPos.x + robotBorder + 1) / grid_len : (limit_x - 1) / grid_len);
 				l++) {
-				if (Vector2D::calculateDistance(Vector2D(l, k), robotPos) < robotBorder) grid[k][l] = true;
+				Vector2D newVect = Vector2D(l * grid_len, k * grid_len);
+				if (Vector2D::calculateDistance(newVect, robotPos) < robotBorder) grid_bool[k][l] = true;
 			}
 		}
 	}
@@ -105,8 +125,8 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 		if (clients[i]->phase == ClientPhase::ACCEPTED) {
 			Robot* robot = clients[i]->getRobot();
 			if (robot->phase == RobotPhase::MOVING || robot->phase == RobotPhase::LIFTING) {
-				Vector2D& pose = robot->getPose().first;
-				Vector2D& keypoint = robot->getKeypoint().first;
+				Vector2D pose = robot->getPose().first;
+				Vector2D keypoint = robot->getKeypoint().first;
 				
 				if (pose == keypoint) return;
 
@@ -120,7 +140,7 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 						for (int l = (((pose.x - robotBorder - 1) / grid_len >= 0) ? (pose.x - robotBorder - 1) / grid_len : 0);
 							l <= (((pose.x + robotBorder + 1) / grid_len <= (limit_x - 1) / grid_len) ? (pose.x + robotBorder + 1) / grid_len : (limit_x - 1) / grid_len);
 							l++) {
-							grid[k][l] = true;
+							grid_bool[k][l] = true;
 						}
 					}
 				}
@@ -132,7 +152,7 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 						k <= (((pose.y + robotBorder + 1) / grid_len <= (limit_y - 1) / grid_len) ? (pose.y + robotBorder + 1) / grid_len : (limit_y - 1) / grid_len);
 						k++) {
 						for (int l = x_min / grid_len; l <= x_max / grid_len; l++) {
-							grid[k][l] = true;
+							grid_bool[k][l] = true;
 						}
 					}
 				}
@@ -144,7 +164,8 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 					for (int l = (((keypoint.x - robotBorder - 1) / grid_len >= 0) ? (keypoint.x - robotBorder - 1) / grid_len : 0);
 						l <= (((keypoint.x + robotBorder + 1) / grid_len <= (limit_x - 1) / grid_len) ? (keypoint.x + robotBorder + 1) / grid_len : (limit_x - 1) / grid_len);
 						l++) {
-						if (Vector2D::calculateDistance(Vector2D(l, k), keypoint) < robotBorder) grid[k][l] = true;
+						Vector2D newVect = Vector2D(l * grid_len, k * grid_len);
+						if (Vector2D::calculateDistance(newVect, keypoint) < robotBorder) grid_bool[k][l] = true;
 					}
 				}
 			}

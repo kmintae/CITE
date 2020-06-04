@@ -33,7 +33,7 @@ class Grid
 private:
 	int grid_len;
 	int limit_x, limit_y;
-	bool** grid;
+	bool** grid_bool;
 	
 	int robotBorder, brickBorder;
 	int errorLimit;

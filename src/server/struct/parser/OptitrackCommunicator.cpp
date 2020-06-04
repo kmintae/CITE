@@ -10,15 +10,14 @@
 std::mutex OptitrackCommunicator::mtx; // Shared
 bool OptitrackCommunicator::isDestructed = false; // Shared
 SOCKET OptitrackCommunicator::udpSocket;
+int OptitrackCommunicator::maxRobotLimit = GetPrivateProfileInt("connection", "MAX_ROBOT_CONNECTED", 2, "../config/server.ini");
 
-OptitrackCommunicator::OptitrackCommunicator() : communicator()
+std::pair<Vector2D, Vector2D>* OptitrackCommunicator::poseArr = new std::pair<Vector2D, Vector2D>[OptitrackCommunicator::maxRobotLimit]; // Shared: Heap
+
+OptitrackCommunicator::OptitrackCommunicator()
 {
-	int maxRobotLimit = GetPrivateProfileInt("connection", "MAX_ROBOT_CONNECTED", 2, "../config/server.ini");
-
-	poseArr = new std::pair<Vector2D, Vector2D>[maxRobotLimit];
-
 	// Socket Initiation
-	UDPSocket(OptitrackCommunicator::udpSocket);
+	UDPSocket(wsaData, OptitrackCommunicator::udpSocket);
 	
 	// Multithread function communicate()
 	communicator = std::thread(&OptitrackCommunicator::communicate, this);
@@ -32,7 +31,9 @@ OptitrackCommunicator::~OptitrackCommunicator()
 	OptitrackCommunicator::isDestructed = true;
 	communicator.join();
 
-	delete[] poseArr;
+	delete[] OptitrackCommunicator::poseArr;
+
+	WSACleanup();
 }
 
 void OptitrackCommunicator::communicate()
@@ -46,13 +47,14 @@ void OptitrackCommunicator::communicate()
 		}
 
 		// Fetching Optitrack Raw Data
-		std::string rawData = fetchOptitrackData(OptitrackCommunicator::udpSocket);
+		std::string rawData;
+		if (fetchOptitrackData(OptitrackCommunicator::udpSocket, rawData) == SOCKET_ERROR) {
+			closesocket(OptitrackCommunicator::udpSocket);
+			break;
+		}
 		
 		// Update Array
 		updateArray(rawData);
-
-		// Sleep for 0.5s
-		Sleep(500);
 	}
 }
 void OptitrackCommunicator::updateArray(std::string rawData)
@@ -60,6 +62,9 @@ void OptitrackCommunicator::updateArray(std::string rawData)
 	// Parse rawData & Update Array
 	// Lock Acquired
 	std::unique_lock<std::mutex> lck(OptitrackCommunicator::mtx);
+	
+	// TODO: Initialize
+
 	std::stringstream ss1(rawData);
 	std::string line;
 	if (rawData != "")
@@ -72,26 +77,26 @@ void OptitrackCommunicator::updateArray(std::string rawData)
 			float X, Y, theta;
 
 			// ID
-			std::getline(ss2, ID_s, ',');
+			std::getline(ss2, ID_s, ' ');
 			ID = stoi(ID_s);
 
 			// X
-			std::getline(ss2, X_s, ',');
+			std::getline(ss2, X_s, ' ');
 			X = stof(X_s);
 
 			// Y
-			std::getline(ss2, Y_s, ',');
+			std::getline(ss2, Y_s, ' ');
 			Y = stof(Y_s);
 
 			// Theta
-			std::getline(ss2, theta_s, ',');
+			std::getline(ss2, theta_s, ' ');
 			theta = stof(theta_s);
 			
-			poseArr[ID].first.x = X;
-			poseArr[ID].first.y = Y;
+			OptitrackCommunicator::poseArr[ID].first.x = X;
+			OptitrackCommunicator::poseArr[ID].first.y = Y;
 
 			Vector2D dir = Vector2D::radianToVector(theta);
-			poseArr[ID].second = dir;
+			OptitrackCommunicator::poseArr[ID].second = dir;
 		}
 	}
 }
@@ -102,8 +107,10 @@ std::pair<Vector2D, Vector2D>* OptitrackCommunicator::getPoseArray()
 	// Lock Acquired
 	std::unique_lock<std::mutex> lck(OptitrackCommunicator::mtx);
 
-	std::pair<Vector2D, Vector2D>* newPoseArr = new std::pair<Vector2D, Vector2D>[maxRobotLimit];
-	for (int i = 0; i < maxRobotLimit; i++) newPoseArr[i] = poseArr[i];
+	std::pair<Vector2D, Vector2D>* newPoseArr = new std::pair<Vector2D, Vector2D>[OptitrackCommunicator::maxRobotLimit];
+	for (int i = 0; i < OptitrackCommunicator::maxRobotLimit; i++) {
+		newPoseArr[i] = OptitrackCommunicator::poseArr[i];
+	}
 
 	return newPoseArr;
 }
@@ -113,7 +120,7 @@ std::pair<Vector2D, Vector2D> OptitrackCommunicator::getPose(int robotNum)
 	// Lock Acquired
 	std::unique_lock<std::mutex> lck(OptitrackCommunicator::mtx);
 
-	return poseArr[robotNum];
+	return OptitrackCommunicator::poseArr[robotNum];
 }
 
 std::pair<int, std::pair<Vector2D, Vector2D>> OptitrackCommunicator::getConnectWaitingRobot(std::pair<Vector2D, Vector2D>* prevPoseArr)
@@ -124,14 +131,15 @@ std::pair<int, std::pair<Vector2D, Vector2D>> OptitrackCommunicator::getConnectW
 	// Detect One with 22.5 Degree (Return -1 if Fails/Detects more than 2)
 	// Information: prevPoseArr, poseArr
 	int result = -1;
-	for (int i = 0; i < maxRobotLimit; i++)
+	for (int i = 0; i < OptitrackCommunicator::maxRobotLimit; i++)
 	{
-		if (prevPoseArr[i].first != poseArr[i].first) continue;
-		if (Vector2D::isSimilar(poseArr[i].second - prevPoseArr[i].second, Vector2D::radianToVector(CAL_ROT_DEG * 3.141592 / 180.0))) {
+		if (prevPoseArr[i].first != OptitrackCommunicator::poseArr[i].first) continue;
+		Vector2D calVect = Vector2D::radianToVector(CAL_ROT_DEG * 3.141592 / 180.0);
+		if (Vector2D::isSimilar(OptitrackCommunicator::poseArr[i].second - prevPoseArr[i].second, calVect)) {
 			if (result != -1) break;
 			else result = i;
 		}
 	}
 	if (result == -1) return std::make_pair(result, std::make_pair(Vector2D(), Vector2D()));
-	return std::make_pair(result, poseArr[result]);
+	return std::make_pair(result, OptitrackCommunicator::poseArr[result]);
 }

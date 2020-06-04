@@ -43,7 +43,7 @@ public:
 
 	void markAsSelectedBrick(int srcBrickLayerIndex, Brick* brick);
 	void markAsGrabbedBrick(Brick* brick);
-	void markAsLiftedBrick(int dstBrickLayerIndex, Brick* brick);
+	void markAsLiftedBrick(Brick* srcBrick, int dstBrickLayerIndex, Brick* dstBrick);
 	void markAsReleasedBrick(Brick* brick);
 	void markAsDone(int srcBrickLayerIndex, Brick* srcBrick, int dstBrickLayerIndex, Brick* dstBrick);
 

@@ -53,19 +53,19 @@ void Brick::setDir(float x, float y, float z)
 	pose.second.setVect3D(x, y, z);
 }
 
-Vector2D &Brick::getPos2D()
+Vector2D Brick::getPos2D()
 {
 	return pose.first.getVect2D();
 }
-Vector3D &Brick::getPos3D()
+Vector3D Brick::getPos3D()
 {
 	return pose.first;
 }
-Vector2D &Brick::getDir2D()
+Vector2D Brick::getDir2D()
 {
 	return pose.second.getVect2D();
 }
-Vector3D &Brick::getDir3D()
+Vector3D Brick::getDir3D()
 {
 	return pose.second;
 }

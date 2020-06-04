@@ -42,7 +42,7 @@ class ProgramState
 {
 private:
 	// Robot Lists
-	Client** clients;
+	static Client** clients;
 
 	// Waiting Buffer
 	static std::queue<Client*> waitingBuffer;
@@ -51,18 +51,21 @@ private:
 	static OptitrackCommunicator optitrackCommunicator;
 
 	// Status: BrickListManager, Grid
-	BrickLayerList* brickLayerList;
-	Grid* grid;
+	static BrickLayerList* brickLayerList;
+	static Grid* grid;
 
 	// Mutex & Condition Variable
-	std::mutex mtx_state;
-	std::condition_variable cv_state;
+	static std::mutex mtx_state;
+	static std::condition_variable cv_state;
 	
-	std::mutex mtx_connect;
-	std::mutex mtx_program;
+	static std::mutex mtx_connect;
+	static std::mutex mtx_program;
 
 	// Thread
 	std::thread thread_conn;
+
+	// Temporary Thread for Grid Printing
+	std::thread thread_grid_printing;
 
 	// Variables
 	static int srcBrickLayerIndex, dstBrickLayerIndex;
@@ -70,7 +73,7 @@ private:
 	static bool isTerminationActivated; // Signal
 	
 	static int connClientNum;
-	int maxClientNum;
+	static int maxClientNum;
 
 public:
 	ProgramState();
@@ -81,6 +84,9 @@ public:
 	void optitrackConnect(); // Executed in Independent Thread
 
 	void workSession(Client *client); // Executed in independent thread (One Thread per Connected Client)
+
+	// Print Grid
+	void printGrid();
 
 	// Emergency Stop
 	void makeStop();

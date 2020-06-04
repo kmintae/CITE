@@ -16,7 +16,7 @@ using json = nlohmann::json;
 JsonParser::JsonParser()
 {
 	// Json Parsing
-	std::ifstream json_stream("../../../data/rhino_200603.json");
+	std::ifstream json_stream("../data/rhino_200603.json");
 	json j;
 
 	json_stream >> j;

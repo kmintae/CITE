@@ -15,6 +15,9 @@ BrickLayerList::BrickLayerList(std::mutex *mtx, std::condition_variable* cv)
 
 	this->mtx = mtx;
 	this->cv = cv;
+
+	// Initialization
+	srcBrickLayerIndex = dstBrickLayerIndex = 0;
 }
 BrickLayerList::~BrickLayerList()
 {
@@ -123,9 +126,10 @@ void BrickLayerList::markAsGrabbedBrick(Brick* brick)
 {
 	brick->setAsGrabbed();
 }
-void BrickLayerList::markAsLiftedBrick(int dstBrickLayerIndex, Brick* brick)
+void BrickLayerList::markAsLiftedBrick(Brick* srcBrick, int dstBrickLayerIndex, Brick* dstBrick)
 {
-	dstBrickLayerList[dstBrickLayerIndex]->markAsSelected(brick);
+	srcBrick->setAsLifted();
+	dstBrickLayerList[dstBrickLayerIndex]->markAsSelected(dstBrick);
 }
 void BrickLayerList::markAsReleasedBrick(Brick* brick)
 {
@@ -137,7 +141,7 @@ void BrickLayerList::markAsDone(int srcBrickLayerIndex, Brick *srcBrick, int dst
 	dstBrickLayerList[dstBrickLayerIndex]->markAsDone(dstBrick);
 }
 
-bool BrickLayerList::isDone()
+bool BrickLayerList::isDone() // 하자 있는 곳
 {
 	// Lock Acquired
 	std::unique_lock<std::mutex> lck(*mtx);

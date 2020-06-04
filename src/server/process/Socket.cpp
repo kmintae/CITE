@@ -33,7 +33,7 @@ void serverSocket(ProgramState* programState)
 
 	int maxRobotLimit;
 	maxRobotLimit = GetPrivateProfileInt("connection", "MAX_ROBOT_CONNECTED", 2, "../config/server.ini");
-
+	
 	listen(hListen, maxRobotLimit);
 
 	// Using As Blocking Mode: Multi-Threading

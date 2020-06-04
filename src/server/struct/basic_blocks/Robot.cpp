@@ -24,7 +24,7 @@ void Robot::setPose(const std::pair<Vector2D, Vector2D>& pose)
 {
 	this->pose = pose;
 }
-std::pair<Vector2D, Vector2D>& Robot::getPose()
+std::pair<Vector2D, Vector2D> Robot::getPose()
 {
 	return pose;
 }
@@ -33,20 +33,16 @@ void Robot::setPath(const std::vector<std::pair<Vector2D, Vector2D>>& path)
 {
 	this->path = path;
 }
-std::vector<std::pair<Vector2D, Vector2D>>& Robot::getPath()
+std::vector<std::pair<Vector2D, Vector2D>> Robot::getPath()
 {
 	return path;
 }
 
-std::pair<Vector2D, Vector2D>& Robot::getKeypoint()
+std::pair<Vector2D, Vector2D> Robot::getKeypoint()
 {
-	if (path.empty()) {
-		fprintf(stderr, "No Path Exists\n");
-		return std::make_pair(Vector2D(), Vector2D());
-	}
 	return path.front();
 }
-std::pair<Vector2D, Vector2D>& Robot::getFinalPose()
+std::pair<Vector2D, Vector2D> Robot::getFinalPose()
 {
 	return finalPose;
 }

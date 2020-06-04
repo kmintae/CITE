@@ -28,11 +28,11 @@
 class OptitrackCommunicator
 {
 private:
-	int maxRobotLimit;
+	static int maxRobotLimit;
 
 	std::thread communicator;
 
-	std::pair<Vector2D, Vector2D>* poseArr; // Shared: Heap
+	static std::pair<Vector2D, Vector2D>* poseArr; // Shared: Heap
 
 	static std::mutex mtx; // Shared
 	static bool isDestructed; // Shared
@@ -40,6 +40,8 @@ private:
 	void updateArray(std::string rawData);
 
 	static SOCKET udpSocket;
+
+	WSAData wsaData;
 
 public:
 	OptitrackCommunicator();

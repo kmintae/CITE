@@ -17,38 +17,52 @@ OptitrackCommunicator ProgramState::optitrackCommunicator;
 int ProgramState::srcBrickLayerIndex = 0;
 int ProgramState::dstBrickLayerIndex = 0;
 bool ProgramState::isWorking = false; // Current Program State
-bool ProgramState::isTerminationActivated; // Signal
+bool ProgramState::isTerminationActivated = false; // Signal
 
 int ProgramState::connClientNum = 0;
 
-ProgramState::ProgramState() : thread_conn()
+// Mutexes
+std::mutex ProgramState::mtx_state;
+std::condition_variable ProgramState::cv_state;
+
+std::mutex ProgramState::mtx_connect;
+std::mutex ProgramState::mtx_program;
+
+// Robot Lists
+int ProgramState::maxClientNum = GetPrivateProfileInt("connection", "MAX_ROBOT_CONNECTED", 2, "../config/server.ini");
+Client** ProgramState::clients = new Client * [ProgramState::maxClientNum];
+
+BrickLayerList* ProgramState::brickLayerList= new BrickLayerList(&ProgramState::mtx_state, &ProgramState::cv_state);
+Grid* ProgramState::grid = new Grid(&ProgramState::mtx_state, &ProgramState::cv_state);
+
+ProgramState::ProgramState()
 {
-	brickLayerList = new BrickLayerList(&mtx_state, &cv_state);
-	grid = new Grid(&mtx_state, &cv_state);
-
-	maxClientNum = GetPrivateProfileInt("connection", "MAX_ROBOT_CONNECTED", 2, "../config/server.ini");
-
-	clients = new Client*[ProgramState::maxClientNum];
 	for (int i = 0; i < ProgramState::maxClientNum; i++) {
-		clients[i] = new Client();
+		ProgramState::clients[i] = new Client();
 	}
-
+	
+	// Lock Acquired
+	std::unique_lock<std::mutex> lck(ProgramState::mtx_connect);
+	ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+	lck.unlock();
+	
 	// Multi-Threading
 	thread_conn = std::thread(&ProgramState::optitrackConnect, this);
+	thread_grid_printing = std::thread(&ProgramState::printGrid, this);
 }
 ProgramState::~ProgramState()
 {
 	// Thread Joining
 	thread_conn.join();
 	for (int i = 0; i < ProgramState::maxClientNum; i++) {
-		if (clients[i]->phase == ClientPhase::ACCEPTED) clients[i]->clientThread.join();
-		delete clients[i];
+		if (ProgramState::clients[i]->phase == ClientPhase::ACCEPTED) ProgramState::clients[i]->clientThread.join();
+		delete ProgramState::clients[i];
 	}
 	
 	// De-Allocation
-	delete brickLayerList;
-	delete grid;
-	delete[] clients;
+	delete ProgramState::brickLayerList;
+	delete ProgramState::grid;
+	delete[] ProgramState::clients;
 }
 
 // Executed in Independent Thread
@@ -60,7 +74,7 @@ void ProgramState::acceptClient(SOCKET* serverSock)
 
 	// Emergency Exit
 	// Lock Acquired
-	std::unique_lock<std::mutex> lck_program(mtx_program);
+	std::unique_lock<std::mutex> lck_program(ProgramState::mtx_program);
 	if (ProgramState::isTerminationActivated) {
 		closesocket(hClient);
 		return;
@@ -68,7 +82,7 @@ void ProgramState::acceptClient(SOCKET* serverSock)
 	lck_program.unlock();
 
 	// Lock Acquired
-	std::unique_lock<std::mutex> lck(mtx_connect);
+	std::unique_lock<std::mutex> lck(ProgramState::mtx_connect);
 
 	// Checking Current Client Number
 	if (ProgramState::connClientNum == ProgramState::maxClientNum) {
@@ -90,23 +104,22 @@ void ProgramState::optitrackConnect()
 	{
 		// Emergency Exit
 		// Lock Acquired
-		std::unique_lock<std::mutex> lck_program(mtx_program);
+		std::unique_lock<std::mutex> lck_program(ProgramState::mtx_program);
 		if (ProgramState::isTerminationActivated) {
 			return;
 		}
 		lck_program.unlock();
 
 		// Lock Acquired
-		std::unique_lock<std::mutex> lck(mtx_connect); // Updating connQueue
-
-		if (brickLayerList->isDone()) {
+		std::unique_lock<std::mutex> lck(ProgramState::mtx_connect); // Updating connQueue
+		if (ProgramState::brickLayerList->isDone()) {
 			break;
 		}
 
 		// Assumption: Connection will be held without conflicts incurred by other robots
-		while (!waitingBuffer.empty())
+		while (!ProgramState::waitingBuffer.empty())
 		{
-			Client* head = waitingBuffer.front();
+			Client* head = ProgramState::waitingBuffer.front();
 			
 			// Checking Current Client Number
 			if (ProgramState::connClientNum < ProgramState::maxClientNum) {
@@ -152,8 +165,8 @@ void ProgramState::optitrackConnect()
 
 					// Check if robot_num is already allocated
 					bool isUsing = false;
-					std::unique_lock<std::mutex> lck2(mtx_state);
-					if (clients[robotInfo.first]->phase != ClientPhase::DISCONNECTED) isUsing = true;
+					std::unique_lock<std::mutex> lck2(ProgramState::mtx_state);
+					if (ProgramState::clients[robotInfo.first]->phase != ClientPhase::DISCONNECTED) isUsing = true;
 					lck2.unlock();
 
 					if (!isUsing) {
@@ -164,11 +177,11 @@ void ProgramState::optitrackConnect()
 				// Update Array
 				if (!socketTerminated)
 				{
-					std::unique_lock<std::mutex> lck2(mtx_state);
+					std::unique_lock<std::mutex> lck2(ProgramState::mtx_state);
 					head->connect(robotInfo.first, robotInfo.second);
-					clients[robotInfo.first] = head;
+					ProgramState::clients[robotInfo.first] = head;
 					// Start Multi-threading
-					clients[robotInfo.first]->clientThread = std::thread(&ProgramState::workSession, this, clients[robotInfo.first]);
+					ProgramState::clients[robotInfo.first]->clientThread = std::thread(&ProgramState::workSession, this, ProgramState::clients[robotInfo.first]);
 
 					ProgramState::connClientNum++;
 					lck2.unlock();
@@ -186,26 +199,26 @@ void ProgramState::workSession(Client* client)
 	{
 		// Emergency Exit
 		// Lock Acquired
-		std::unique_lock<std::mutex> lck_program(mtx_program);
+		std::unique_lock<std::mutex> lck_program(ProgramState::mtx_program);
 		if (ProgramState::isTerminationActivated) {
 			return;
 		}
 		lck_program.unlock();
 
 		// Implement Workflow
-		std::unique_lock<std::mutex> lck(mtx_state, std::defer_lock);
+		std::unique_lock<std::mutex> lck(ProgramState::mtx_state, std::defer_lock);
 
 		// 1. Update Position Information
 		lck.lock();
 		Robot* robot = client->getRobot();
 		std::pair<Vector2D, Vector2D> pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
 		robot->setPose(pose);
-		grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+		ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 
 		// 2. Classify 
 		Brick *srcBrick, *dstBrick;
 		int bytes_send, bytes_recv;
-		SOCKET sock;
+		SOCKET sock = client->getSocket();
 		std::pair<Vector2D, Vector2D> srcFinalPose, dstFinalPose;
 		std::pair<Vector2D, Vector2D> keypoint, finalPose;
 		Vector3D srcBrickPos, dstBrickPos;
@@ -215,11 +228,10 @@ void ProgramState::workSession(Client* client)
 		switch (robot->phase)
 		{
 		case RobotPhase::STOP: // 2-1. STOP: Decision of srcBrick
-			srcBrick = brickLayerList->getNextSrcBrick(robot, ProgramState::srcBrickLayerIndex, lck);
+			srcBrick = ProgramState::brickLayerList->getNextSrcBrick(robot, ProgramState::srcBrickLayerIndex, lck);
 
 			// All Jobs Done: Disconnect
 			if (srcBrick == NULL) {
-				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::DCN, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
@@ -227,13 +239,15 @@ void ProgramState::workSession(Client* client)
 
 				delete client; // closeSocket + De-allocation
 				client = new Client();
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				ProgramState::connClientNum--;
 				return;
 			}
-			srcFinalPose = brickLayerList->getFinalPose(grid, srcBrick, lck);
+
+			ProgramState::brickLayerList->markAsSelectedBrick(ProgramState::srcBrickLayerIndex, srcBrick);
+			srcFinalPose = ProgramState::brickLayerList->getFinalPose(ProgramState::grid, srcBrick, lck);
 			robot->markAsMove(srcBrick, srcFinalPose);
-			grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 			break;
 
 
@@ -245,20 +259,20 @@ void ProgramState::workSession(Client* client)
 			// 2-2-1. Check if Current Pose == Final Pose: Send HLT, change phase to GRAB, and break
 			if (Vector2D::isNearest(pose.first, finalPose.first) && Vector2D::isSimilar(pose.second, finalPose.second)) {
 				// Send HLT
-				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 					
 					delete client; // closeSocket + De-allocation
 					client = new Client();
-					grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+					ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 					ProgramState::connClientNum--;
 					return;
 				}
 				// Change Phase to Grab
+				ProgramState::brickLayerList->markAsGrabbedBrick(robot->getSourceBrick());
 				robot->markAsGrab();
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				break;
 			}
 			// 2-2-1-Extra. Check if Dist (Current Pose_Pos, Final Pose_Pos) <= GRID_SIZE: Send MVL Instruction
@@ -271,33 +285,32 @@ void ProgramState::workSession(Client* client)
 
 					delete client; // closeSocket + De-allocation
 					client = new Client();
-					grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+					ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 					ProgramState::connClientNum--;
 					return;
 				}
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				break;
 			}
 
 			// 2-2-2. Check if Current Pose == Keypoint: Send HLT, Pathfinding, Send PID, Receive DONE/ERROR, and break
 			if (Vector2D::isNearest(pose.first, keypoint.first) && Vector2D::isSimilar(pose.second, keypoint.second)) { // Current Pose == Keypoint
 				// Send HLT
-				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
 					delete client; // closeSocket + De-allocation
 					client = new Client();
-					grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+					ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 					ProgramState::connClientNum--;
 					return;
 				}
 
 				// Pathfinding, Save Keypoint in Robot
-				robot->setPath(pathFinding(pose, finalPose, grid, lck, cv_state));
+				robot->setPath(pathFinding(pose, finalPose, ProgramState::grid, lck, ProgramState::cv_state));
 				keypoint = robot->getKeypoint();
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 
 				// Send PID
 				param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
@@ -307,10 +320,9 @@ void ProgramState::workSession(Client* client)
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
-					lck.lock();
 					delete client; // closeSocket + De-allocation
 					client = new Client();
-					grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+					ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 					return;
 				}
 
@@ -321,10 +333,9 @@ void ProgramState::workSession(Client* client)
 				if (bytes_recv == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
-					lck.lock();
 					delete client; // closeSocket + De-allocation
 					client = new Client();
-					grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+					ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 					ProgramState::connClientNum--;
 					return;
 				}
@@ -332,7 +343,7 @@ void ProgramState::workSession(Client* client)
 					fprintf(stderr, "PID Initialization Failed\n");
 				}
 
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				break;
 			}
 			
@@ -345,11 +356,11 @@ void ProgramState::workSession(Client* client)
 
 				delete client; // closeSocket + De-allocation
 				client = new Client();
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				ProgramState::connClientNum--;
 				return;
 			}
-			grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 			break;
 		
 		
@@ -371,7 +382,7 @@ void ProgramState::workSession(Client* client)
 				lck.lock();
 				delete client; // closeSocket + De-allocation
 				client = new Client();
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				ProgramState::connClientNum--;
 				return;
 			}
@@ -385,7 +396,7 @@ void ProgramState::workSession(Client* client)
 				lck.lock();
 				delete client; // closeSocket + De-allocation
 				client = new Client();
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				ProgramState::connClientNum--;
 				return;
 			}
@@ -394,27 +405,28 @@ void ProgramState::workSession(Client* client)
 			lck.lock();
 			pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
 			robot->setPose(pose);
-			grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 			
 			// 2-3-3. Deciding dstBrick
-			dstBrick = brickLayerList->getNextDstBrick(robot, ProgramState::dstBrickLayerIndex, lck);
+			dstBrick = ProgramState::brickLayerList->getNextDstBrick(robot, ProgramState::dstBrickLayerIndex, lck);
 
 			// All Jobs Done: Disconnect
 			if (srcBrick == NULL) {
-				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::DCN, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 				}
 				delete client; // closeSocket + De-allocation
 				client = new Client();
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				ProgramState::connClientNum--;
 				return;
 			}
-			dstFinalPose = brickLayerList->getFinalPose(grid, dstBrick, lck);
+
+			ProgramState::brickLayerList->markAsLiftedBrick(robot->getSourceBrick(), ProgramState::dstBrickLayerIndex, dstBrick);
+			dstFinalPose = ProgramState::brickLayerList->getFinalPose(ProgramState::grid, dstBrick, lck);
 			robot->markAsLift(dstBrick, dstFinalPose);
-			grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 			break;
 
 
@@ -426,21 +438,21 @@ void ProgramState::workSession(Client* client)
 			// 2-4-1. Check if Current Pose == Final Pose: Send HLT, and change phase to RLZ
 			if (Vector2D::isNearest(pose.first, finalPose.first) && Vector2D::isSimilar(pose.second, finalPose.second)) { // Current Pose == Final Pose
 				// Send HLT
-				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
 					delete client; // closeSocket + De-allocation
 					client = new Client();
-					grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+					ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 					ProgramState::connClientNum--;
 					return;
 				}
 
 				// Change Phase to Release
+				ProgramState::brickLayerList->markAsReleasedBrick(robot->getSourceBrick());
 				robot->markAsRelease();
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				break;
 			}
 
@@ -454,33 +466,32 @@ void ProgramState::workSession(Client* client)
 
 					delete client; // closeSocket + De-allocation
 					client = new Client();
-					grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+					ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 					ProgramState::connClientNum--;
 					return;
 				}
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				break;
 			}
 
 			// 2-4-2. Check if Current Pose == Keypoint: Send HLT, Send PID, Receive DONE/ERROR
 			if (Vector2D::isNearest(pose.first, keypoint.first) && Vector2D::isSimilar(pose.second, keypoint.second)) { // Current Pose == Keypoint
 				// Send HLT
-				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
 					delete client; // closeSocket + De-allocation
 					client = new Client();
-					grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+					ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 					ProgramState::connClientNum--;
 					return;
 				}
 
 				// Pathfinding, Save Keypoint in Robot
-				robot->setPath(pathFinding(pose, finalPose, grid, lck, cv_state));
+				robot->setPath(pathFinding(pose, finalPose, ProgramState::grid, lck, ProgramState::cv_state));
 				keypoint = robot->getKeypoint();
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 
 				// PID RTT is ignorable
 				// Send PID
@@ -493,7 +504,7 @@ void ProgramState::workSession(Client* client)
 
 					delete client; // closeSocket + De-allocation
 					client = new Client();
-					grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+					ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 					ProgramState::connClientNum--;
 					return;
 				}
@@ -506,7 +517,7 @@ void ProgramState::workSession(Client* client)
 
 					delete client; // closeSocket + De-allocation
 					client = new Client();
-					grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+					ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 					ProgramState::connClientNum--;
 					return;
 				}
@@ -514,7 +525,7 @@ void ProgramState::workSession(Client* client)
 					fprintf(stderr, "PID Initialization Failed\n");
 				}
 
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				break;
 			}
 
@@ -527,11 +538,11 @@ void ProgramState::workSession(Client* client)
 
 				delete client; // closeSocket + De-allocation
 				client = new Client();
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				ProgramState::connClientNum--;
 				return;
 			}
-			grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 			break;
 
 
@@ -551,7 +562,7 @@ void ProgramState::workSession(Client* client)
 				lck.lock();
 				delete client; // closeSocket + De-allocation
 				client = new Client();
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				ProgramState::connClientNum--;
 				return;
 			}
@@ -565,7 +576,7 @@ void ProgramState::workSession(Client* client)
 				lck.lock();
 				delete client; // closeSocket + De-allocation
 				client = new Client();
-				grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 				ProgramState::connClientNum--;
 				return;
 			}
@@ -574,13 +585,40 @@ void ProgramState::workSession(Client* client)
 			lck.lock();
 			pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
 			robot->setPose(pose);
-			grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 
 			// 2-5-3. Change phase to STOP
+			ProgramState::brickLayerList->markAsDone(ProgramState::srcBrickLayerIndex, robot->getSourceBrick(), 
+				ProgramState::dstBrickLayerIndex, robot->getDestinationBrick());
 			robot->markAsStop();
-			grid->repaint(brickLayerList, &optitrackCommunicator, clients);
+			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 			break;
 		}
+		lck.unlock();
+		
+		// Sleep for 0.1s
+		Sleep(100);
+	}
+}
+
+// Print Grid
+void ProgramState::printGrid()
+{
+	while (true) {
+		std::unique_lock<std::mutex> lck(ProgramState::mtx_state);
+
+		system("cls");
+		ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+		bool** grid_bool = ProgramState::grid->getGrid();
+
+		for (int i = 0; i < ProgramState::grid->y; i++) {
+			for (int j = 0; j < ProgramState::grid->x; j++) {
+				printf("%d", grid_bool[i][j]);
+			}
+			printf("\n");
+		}
+		// Sleep for 0.1s
+		Sleep(100);
 	}
 }
 
@@ -588,7 +626,7 @@ void ProgramState::workSession(Client* client)
 void ProgramState::makeStop()
 {
 	// Lock Acquired
-	std::unique_lock<std::mutex> lck(mtx_program); // Updating connQueue
+	std::unique_lock<std::mutex> lck(ProgramState::mtx_program); // Updating connQueue
 
 	ProgramState::isTerminationActivated = true;
 }
