@@ -17,16 +17,15 @@
 #include "BrickLayer.h"
 #include "Instruction.h"
 
-#include "../vector/Position.h"
-#include "../vector/Direction.h"
+#include "../vector/Vector.h"
 
 class Robot
 {
 private:
 	int robotNum;
 	
-	std::pair<Position2D, Direction2D> pose, finalPose;
-	std::vector<std::pair<Position2D, Direction2D>> path;
+	std::pair<Vector2D, Vector2D> pose, finalPose;
+	std::vector<std::pair<Vector2D, Vector2D>> path;
 	Brick *src, *dst;
 
 	// Lock: Need Information?
@@ -35,24 +34,24 @@ private:
 public:
 	RobotPhase phase;
 
-	Robot(int robotNum, std::pair<Position2D, Direction2D>& initPose);
+	Robot(int robotNum, std::pair<Vector2D, Vector2D>& initPose);
 
 	int getRobotNum();
 
-	void setPose(const std::pair<Position2D, Direction2D> &pose);
-	std::pair<Position2D, Direction2D>& getPose();
-	void setPath(const std::vector<std::pair<Position2D, Direction2D>>& path);
-	std::vector<std::pair<Position2D, Direction2D>>& getPath();
-	std::pair<Position2D, Direction2D>& getKeypoint();
+	void setPose(const std::pair<Vector2D, Vector2D> &pose);
+	std::pair<Vector2D, Vector2D>& getPose();
+	void setPath(const std::vector<std::pair<Vector2D, Vector2D>>& path);
+	std::vector<std::pair<Vector2D, Vector2D>>& getPath();
+	std::pair<Vector2D, Vector2D>& getKeypoint();
 	
-	std::pair<Position2D, Direction2D>& getFinalPose();
+	std::pair<Vector2D, Vector2D>& getFinalPose();
 
 	Brick* getSourceBrick();
 	Brick* getDestinationBrick();
 
-	void markAsMove(Brick* srcBrick, const std::pair<Position2D, Direction2D>& finalPose);
+	void markAsMove(Brick* srcBrick, const std::pair<Vector2D, Vector2D>& finalPose);
 	void markAsGrab();
-	void markAsLift(Brick* dstBrick, const std::pair<Position2D, Direction2D>& finalPose);
+	void markAsLift(Brick* dstBrick, const std::pair<Vector2D, Vector2D>& finalPose);
 	void markAsRelease();
 	void markAsStop();
 

@@ -46,26 +46,26 @@ void Brick::setAsDone()
 
 void Brick::setPos(float x, float y, float z)
 {
-	pose.first.setPos3D(x, y, z);
+	pose.first.setVect3D(x, y, z);
 }
 void Brick::setDir(float x, float y, float z)
 {
-	pose.second.setDir3D(x, y, z);
+	pose.second.setVect3D(x, y, z);
 }
 
-Position2D &Brick::getPos2D()
+Vector2D &Brick::getPos2D()
 {
-	return pose.first.getPos2D();
+	return pose.first.getVect2D();
 }
-Position3D &Brick::getPos3D()
+Vector3D &Brick::getPos3D()
 {
 	return pose.first;
 }
-Direction2D &Brick::getDir2D()
+Vector2D &Brick::getDir2D()
 {
-	return pose.second.getDir2D();
+	return pose.second.getVect2D();
 }
-Direction3D &Brick::getDir3D()
+Vector3D &Brick::getDir3D()
 {
 	return pose.second;
 }
@@ -78,15 +78,15 @@ BrickPhase Brick::getPhase()
 
 bool Brick::operator <(const Brick& b2)
 {
-	return (pose.first < b2.pose.first);
-}
-bool Brick::operator >(const Brick& b2)
-{
-	return (pose.first > b2.pose.first);
+	return (pose.first.lowerPriorityThan(b2.pose.first));
 }
 bool Brick::operator ==(const Brick& b2)
 {
-	return (!(pose.first > b2.pose.first) && !(pose.first < b2.pose.first));
+	return pose.first == b2.pose.first;
+}
+bool Brick::operator > (const Brick& b2)
+{
+	return (!(*this == b2) && !(*this < b2));
 }
 
 std::string Brick::toString()

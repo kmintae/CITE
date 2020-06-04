@@ -9,9 +9,8 @@
 void UDPSocket(SOCKET &udpSocket)
 {
 	udpSocket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
 	int port;
-	port = GetPrivateProfileInt("connection", "UDP_PORT", -1, "../../../config/server.ini");
+	port = GetPrivateProfileInt("connection", "UDP_PORT", -1, "../config/server.ini");
 	if (port == -1) {
 		fprintf(stderr, "config/server.ini Not Existing. Terminating...\n");
 		return;

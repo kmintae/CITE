@@ -26,7 +26,7 @@ void Client::accept(SOCKET& sock, SOCKADDR_IN& sock_in)
 
 	phase = ClientPhase::ACCEPTED;
 }
-void Client::connect(int robotNum, std::pair<Position2D, Direction2D> initialPose)
+void Client::connect(int robotNum, std::pair<Vector2D, Vector2D> initialPose)
 {
 	robot = new Robot(robotNum, initialPose);
 

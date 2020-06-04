@@ -19,8 +19,7 @@
 
 #include "Grid.h"
 
-#include "../vector/Position.h"
-#include "../vector/Direction.h"
+#include "../vector/Vector.h"
 
 class BrickLayerList
 {
@@ -40,7 +39,7 @@ public:
 	Brick* getNextSrcBrick(Robot* robot, int& srcBrickLayerIndex, std::unique_lock<std::mutex>& lck);
 	Brick* getNextDstBrick(Robot* robot, int& dstBrickLayerIndex, std::unique_lock<std::mutex>& lck);
 
-	std::pair<Position2D, Direction2D> getFinalPose(Grid* grid, Brick* brick, std::unique_lock<std::mutex>& lck);
+	std::pair<Vector2D, Vector2D> getFinalPose(Grid* grid, Brick* brick, std::unique_lock<std::mutex>& lck);
 
 	void markAsSelectedBrick(int srcBrickLayerIndex, Brick* brick);
 	void markAsGrabbedBrick(Brick* brick);

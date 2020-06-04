@@ -10,14 +10,12 @@
 #include <vector>
 
 #include "../struct/vector/Vector.h"
-#include "../struct/vector/Position.h"
-#include "../struct/vector/Direction.h"
 
 #include "../struct/states/Grid.h"
 
-std::vector<std::pair<Position2D, Direction2D>> pathFinding(
-	std::pair<Position2D, Direction2D> pose, 
-	std::pair<Position2D, Direction2D> finalPose, 
+std::vector<std::pair<Vector2D, Vector2D>> pathFinding(
+	std::pair<Vector2D, Vector2D> pose,
+	std::pair<Vector2D, Vector2D> finalPose,
 	Grid *grid, 
 	std::unique_lock<std::mutex>& lck, 
 	std::condition_variable &cv);

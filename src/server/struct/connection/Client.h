@@ -16,7 +16,7 @@
 #include "../basic_blocks/Phase.h"
 #include "../basic_blocks/Robot.h"
 
-#include "../vector/Position.h"
+#include "../vector/Vector.h"
 
 class Client
 {
@@ -34,7 +34,7 @@ public:
 	~Client();
 
 	void accept(SOCKET& sock, SOCKADDR_IN& sock_in);
-	void connect(int robotNum, std::pair<Position2D, Direction2D> initialPose);
+	void connect(int robotNum, std::pair<Vector2D, Vector2D> initialPose);
 	
 	SOCKET& getSocket();
 	Robot* getRobot();

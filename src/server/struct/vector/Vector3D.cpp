@@ -19,22 +19,14 @@ Vector3D::Vector3D(Vector3D const& vect) : Vector2D(vect)
 	this->z = vect.z;
 }
 
-void Vector3D::setVect3D(float x, float y, float z)
-{
-	Vector2D::setVect2D(x, y);
-	this->z = z;
-}
-
 Vector2D Vector3D::getVect2D()
 {
 	return Vector2D(x, y);
 }
-
-float Vector3D::calculateDistance(const Vector3D& vect1, const Vector3D& vect2)
+void Vector3D::setVect3D(float x, float y, float z)
 {
-	float res = pow((vect1.x - vect2.x), 2.0) + pow((vect1.y - vect2.y), 2.0) + pow((vect1.z - vect2.z), 2.0);
-	res = pow(res, 0.5);
-	return res;
+	Vector2D::setVect2D(x, y);
+	this->z = z;
 }
 
 std::string Vector3D::toString()
@@ -44,6 +36,10 @@ std::string Vector3D::toString()
 	str.append(")");
 	return str;
 }
+float Vector3D::size()
+{
+	return x * x + y * y + z * z;
+}
 
 void Vector3D::callibrate()
 {
@@ -51,9 +47,19 @@ void Vector3D::callibrate()
 	if (std::abs(z) < 0.001) z = 0;
 }
 
-float Vector3D::size()
+const Vector3D Vector3D::unitVector()
 {
-	return x * x + y * y + z * z;
+	return *this / (this->size());
+}
+const float Vector3D::dotProduct(const Vector3D& vect1, const Vector3D& vect2)
+{
+	return vect1.x * vect2.x + vect1.y * vect2.y + vect1.z + vect2.z;
+}
+const float Vector3D::calculateDistance(const Vector3D& vect1, const Vector3D& vect2)
+{
+	float res = pow((vect1.x - vect2.x), 2.0) + pow((vect1.y - vect2.y), 2.0) + pow((vect1.z - vect2.z), 2.0);
+	res = pow(res, 0.5);
+	return res;
 }
 
 // Operator Overloading
@@ -103,19 +109,25 @@ Vector3D& Vector3D::operator /= (float div)
 	return *this;
 }
 
-Vector3D& Vector3D::operator =(const Vector3D& vect2)
+bool Vector3D::operator==(const Vector3D& vect2)
 {
-	x = vect2.x;
-	y = vect2.y;
-	z = vect2.z;
-	return *this;
+	return (x == vect2.x && y == vect2.y && z == vect2.z);
 }
-
-bool Vector3D::operator ==(const Vector3D& vect2)
-{
-	return ((x == vect2.x) && (y == vect2.y) && (z == vect2.z));
-}
-bool Vector3D::operator !=(const Vector3D& vect2)
+bool Vector3D::operator!=(const Vector3D& vect2)
 {
 	return !(*this == vect2);
+}
+
+bool Vector3D::lowerPriorityThan(const Vector3D& vect2)
+{
+	if (z < vect2.z) return true;
+	if (z > vect2.z) return false;
+
+	if (y < vect2.y) return true;
+	if (y > vect2.y) return false;
+
+	if (x < vect2.x) return true;
+	if (x > vect2.x) return false;
+
+	return false;
 }

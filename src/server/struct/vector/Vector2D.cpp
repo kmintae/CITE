@@ -6,6 +6,10 @@
 
 #include "Vector.h"
 
+float Vector2D::dirLimit = (float)(GetPrivateProfileInt("error", "DIR_LIMIT_DEG", -1, "../config/server.ini")) / (180.0 / 3.141592);
+float Vector2D::posNearestLimit = (float)GetPrivateProfileInt("error", "POS_LIMIT_MM", -1, "../config/server.ini");
+float Vector2D::posNearLimit = (float)GetPrivateProfileInt("grid", "GRID_LEN_MM", -1, "../config/server.ini");
+
 Vector2D::Vector2D()
 {
 	this->x = 0;
@@ -21,6 +25,8 @@ Vector2D::Vector2D(Vector2D const& vect)
 	this->x = vect.x;
 	this->y = vect.y;
 }
+
+
 void Vector2D::setVect2D(float x, float y)
 {
 	this->x = x;
@@ -35,15 +41,56 @@ std::string Vector2D::toString()
 	return str;
 }
 
+float Vector2D::size()
+{
+	return x * x + y * y;
+}
+
 void Vector2D::callibrate()
 {
 	if (std::abs(x) < 0.001) x = 0;
 	if (std::abs(y) < 0.001) y = 0;
 }
 
-float Vector2D::size()
+const Vector2D Vector2D::unitVector()
 {
-	return x * x + y * y;
+	return *this / (this->size());
+}
+const float Vector2D::dotProduct(const Vector2D& vect1, const Vector2D& vect2)
+{
+	return vect1.x * vect2.x + vect1.y * vect2.y;
+}
+const float Vector2D::calculateDistance(const Vector2D& vect1, const Vector2D& vect2)
+{
+	float res = pow(pow((vect1.x - vect2.x), 2.0) + pow((vect1.y - vect2.y), 2.0), 0.5);
+	return res;
+}
+
+const Vector2D Vector2D::radianToVector(const float radian)
+{
+	return Vector2D(cos(radian), sin(radian));
+}
+const float Vector2D::vectorToRadian(const Vector2D& uV)
+{
+	return atan2(uV.y, uV.x);
+}
+
+bool Vector2D::isSimilar(const Vector2D& vect1, const Vector2D& vect2) // Direction Degree Comparison
+{
+	float theta1 = Vector2D::vectorToRadian(vect1);
+	float theta2 = Vector2D::vectorToRadian(vect2);
+
+	float theta = ((theta1 - theta2 < 0) ? theta1 + 360.0 - theta2 : theta1 - theta2);
+	
+	return theta < Vector2D::dirLimit;
+}
+bool Vector2D::isNearest(const Vector2D& vect1, const Vector2D& vect2) // Position Distance Comparison
+{
+	return Vector2D::calculateDistance(vect1, vect2) < Vector2D::posNearestLimit;
+}
+bool Vector2D::isNear(const Vector2D& vect1, const Vector2D& vect2) // Position Distance Comparison
+{
+	return Vector2D::calculateDistance(vect1, vect2) < Vector2D::posNearLimit;
 }
 
 // Operator Overloading
@@ -89,18 +136,11 @@ Vector2D& Vector2D::operator /= (float div)
 	return *this;
 }
 
-Vector2D& Vector2D::operator =(const Vector2D& vect2)
+bool Vector2D::operator==(const Vector2D& vect2)
 {
-	x = vect2.x;
-	y = vect2.y;
-	return *this;
+	return (x == vect2.x && y == vect2.y);
 }
-
-bool Vector2D::operator ==(const Vector2D& vect2)
-{
-	return ((x == vect2.x) && (y == vect2.y));
-}
-bool Vector2D::operator !=(const Vector2D& vect2)
+bool Vector2D::operator!=(const Vector2D& vect2)
 {
 	return !(*this == vect2);
 }

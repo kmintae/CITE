@@ -14,7 +14,7 @@ void serverSocket(ProgramState* programState)
 	hListen = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
 	int port;
-	port = GetPrivateProfileInt("connection", "SERVER_PORT", -1, "../../../config/server.ini");
+	port = GetPrivateProfileInt("connection", "SERVER_PORT", -1, "../config/server.ini");
 	if (port == -1) {
 		fprintf(stderr, "config/server.ini Not Existing. Terminating...\n");
 		return;
@@ -32,7 +32,7 @@ void serverSocket(ProgramState* programState)
 	bind(hListen, (SOCKADDR*)&tListenAddr, sizeof(tListenAddr));
 
 	int maxRobotLimit;
-	maxRobotLimit = GetPrivateProfileInt("connection", "MAX_ROBOT_CONNECTED", 2, "../../../config/server.ini");
+	maxRobotLimit = GetPrivateProfileInt("connection", "MAX_ROBOT_CONNECTED", 2, "../config/server.ini");
 
 	listen(hListen, maxRobotLimit);
 

@@ -6,7 +6,7 @@
 
 #include "Robot.h"
 
-Robot::Robot(int robotNum, std::pair<Position2D, Direction2D>& initPose)
+Robot::Robot(int robotNum, std::pair<Vector2D, Vector2D>& initPose)
 {
 	this->robotNum = robotNum;
 	this->pose = initPose;
@@ -20,33 +20,33 @@ int Robot::getRobotNum()
 	return robotNum;
 }
 
-void Robot::setPose(const std::pair<Position2D, Direction2D>& pose)
+void Robot::setPose(const std::pair<Vector2D, Vector2D>& pose)
 {
 	this->pose = pose;
 }
-std::pair<Position2D, Direction2D>& Robot::getPose()
+std::pair<Vector2D, Vector2D>& Robot::getPose()
 {
 	return pose;
 }
 
-void Robot::setPath(const std::vector<std::pair<Position2D, Direction2D>>& path)
+void Robot::setPath(const std::vector<std::pair<Vector2D, Vector2D>>& path)
 {
 	this->path = path;
 }
-std::vector<std::pair<Position2D, Direction2D>>& Robot::getPath()
+std::vector<std::pair<Vector2D, Vector2D>>& Robot::getPath()
 {
 	return path;
 }
 
-std::pair<Position2D, Direction2D>& Robot::getKeypoint()
+std::pair<Vector2D, Vector2D>& Robot::getKeypoint()
 {
 	if (path.empty()) {
 		fprintf(stderr, "No Path Exists\n");
-		return std::make_pair(Position2D(), Direction2D());
+		return std::make_pair(Vector2D(), Vector2D());
 	}
 	return path.front();
 }
-std::pair<Position2D, Direction2D>& Robot::getFinalPose()
+std::pair<Vector2D, Vector2D>& Robot::getFinalPose()
 {
 	return finalPose;
 }
@@ -60,7 +60,7 @@ Brick* Robot::getDestinationBrick()
 	return dst;
 }
 
-void Robot::markAsMove(Brick* srcBrick, const std::pair<Position2D, Direction2D> &finalPose)
+void Robot::markAsMove(Brick* srcBrick, const std::pair<Vector2D, Vector2D> &finalPose)
 {
 	phase = RobotPhase::MOVING;
 	src = srcBrick;
@@ -70,7 +70,7 @@ void Robot::markAsGrab()
 {
 	phase = RobotPhase::GRAB;
 }
-void Robot::markAsLift(Brick* dstBrick, const std::pair<Position2D, Direction2D> &finalPose)
+void Robot::markAsLift(Brick* dstBrick, const std::pair<Vector2D, Vector2D> &finalPose)
 {
 	phase = RobotPhase::LIFTING;
 	dst = dstBrick;

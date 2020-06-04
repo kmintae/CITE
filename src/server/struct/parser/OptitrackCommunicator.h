@@ -21,8 +21,7 @@
 
 #include "../../process/OptitrackCommunicate.h"
 
-#include "../vector/Position.h"
-#include "../vector/Direction.h"
+#include "../vector/Vector.h"
 
 #define CAL_ROT_DEG 22.5
 
@@ -33,7 +32,7 @@ private:
 
 	std::thread communicator;
 
-	std::pair<Position2D, Direction2D>* poseArr; // Shared: Heap
+	std::pair<Vector2D, Vector2D>* poseArr; // Shared: Heap
 
 	static std::mutex mtx; // Shared
 	static bool isDestructed; // Shared
@@ -48,9 +47,9 @@ public:
 
 	void communicate(); // Parsing Data
 
-	std::pair<Position2D, Direction2D>* getPoseArray();
+	std::pair<Vector2D, Vector2D>* getPoseArray();
 
-	std::pair<Position2D, Direction2D> getPose(int robotNum);
+	std::pair<Vector2D, Vector2D> getPose(int robotNum);
 
-	std::pair<int, std::pair<Position2D, Direction2D>> getConnectWaitingRobot (std::pair<Position2D, Direction2D>* prevPoseArr);
+	std::pair<int, std::pair<Vector2D, Vector2D>> getConnectWaitingRobot (std::pair<Vector2D, Vector2D>* prevPoseArr);
 };

@@ -11,13 +11,12 @@
 
 #include "Phase.h"
 
-#include "../vector/Position.h"
-#include "../vector/Direction.h"
+#include "../vector/Vector.h"
 
 class Brick
 {
 private:
-    std::pair<Position3D, Direction3D> pose;
+    std::pair<Vector3D, Vector3D> pose;
 
     BrickPhase phase; // Brick Phase
 
@@ -39,10 +38,10 @@ public:
     void setPos(float x, float y, float z);
     void setDir(float x, float y, float z);
 
-    Position2D& getPos2D();
-    Position3D& getPos3D();
-    Direction2D& getDir2D();
-    Direction3D& getDir3D();
+    Vector2D& getPos2D();
+    Vector3D& getPos3D();
+    Vector2D& getDir2D();
+    Vector3D& getDir3D();
 
     bool operator <(const Brick& b2);
     bool operator >(const Brick& b2);

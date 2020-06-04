@@ -6,11 +6,19 @@
 
 #pragma once
 
+#ifndef _WINSOCKAPI_
+#define _WINSOCKAPI_
+#endif
+
 #include <string>
 #include <cmath>
+#include <Windows.h>
 
 class Vector2D
 {
+protected:
+	static float dirLimit, posNearestLimit, posNearLimit;
+
 public:
 	float x, y;
 	
@@ -24,6 +32,17 @@ public:
 	float size();
 	void callibrate();
 
+	const Vector2D unitVector();
+	const static float dotProduct(const Vector2D& vect1, const Vector2D& vect2);
+	const static float calculateDistance(const Vector2D& vect1, const Vector2D& vect2);
+
+	const static Vector2D radianToVector(const float radian);
+	const static float vectorToRadian(const Vector2D& uV);
+
+	static bool isSimilar(const Vector2D& vect1, const Vector2D& vect2); // Direction Degree Comparison
+	static bool isNearest(const Vector2D& vect1, const Vector2D& vect2); // Position Distance Comparison
+	static bool isNear(const Vector2D& vect1, const Vector2D& vect2); // Position Distance Comparison
+
 	const Vector2D operator +(const Vector2D& vect2);
 	Vector2D& operator +=(const Vector2D& vect2);
 	const Vector2D operator -(const Vector2D& vect2);
@@ -34,9 +53,8 @@ public:
 	const Vector2D operator/ (float div);
 	Vector2D& operator /= (float div);
 
-	Vector2D& operator =(const Vector2D& vect2);
-	bool operator ==(const Vector2D& vect2);
-	bool operator !=(const Vector2D& vect2);
+	bool operator==(const Vector2D& vect2);
+	bool operator!=(const Vector2D& vect2);
 };
 
 class Vector3D : public Vector2D
@@ -51,11 +69,15 @@ public:
 	Vector2D getVect2D();
 
 	void setVect3D(float x, float y, float z);
-	static float calculateDistance(const Vector3D& vect1, const Vector3D& vect2);
+	
 	std::string toString();
 
 	float size();
 	void callibrate();
+
+	const Vector3D unitVector();
+	const static float dotProduct(const Vector3D& vect1, const Vector3D& vect2);
+	const static float calculateDistance(const Vector3D& vect1, const Vector3D& vect2);
 
 	const Vector3D operator +(const Vector3D& vect2);
 	Vector3D& operator +=(const Vector3D& vect2);
@@ -67,7 +89,8 @@ public:
 	const Vector3D operator/ (float div);
 	Vector3D& operator /= (float div);
 
-	Vector3D& operator =(const Vector3D& vect2);
-	bool operator ==(const Vector3D& vect2);
-	bool operator !=(const Vector3D& vect2);
+	bool operator==(const Vector3D& vect2);
+	bool operator!=(const Vector3D& vect2);
+
+	bool lowerPriorityThan(const Vector3D& vect2);
 };

@@ -24,8 +24,6 @@
 #include "../parser/OptitrackCommunicator.h"
 
 #include "../vector/Vector.h"
-#include "../vector/Position.h"
-#include "../vector/Direction.h"
 
 // Forward Declaration
 class BrickLayerList;

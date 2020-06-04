@@ -7,14 +7,14 @@
 
 #include "PathFinding.h"
 
-std::vector<std::pair<Position2D, Direction2D>> pathFinding (
-	std::pair<Position2D, Direction2D> pose, 
-	std::pair<Position2D, Direction2D> finalPose, 
-	Grid* grid, 
-	std::unique_lock<std::mutex>& lck, 
+std::vector<std::pair<Vector2D, Vector2D>> pathFinding(
+	std::pair<Vector2D, Vector2D> pose,
+	std::pair<Vector2D, Vector2D> finalPose,
+	Grid* grid,
+	std::unique_lock<std::mutex>& lck,
 	std::condition_variable& cv)
 {
-	std::vector<std::pair<Position2D, Direction2D>> path;
+	std::vector<std::pair<Vector2D, Vector2D>> path;
 	
 	// TODO: Implement
 

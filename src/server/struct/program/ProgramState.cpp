@@ -7,23 +7,31 @@
 
 #include "ProgramState.h"
 
+ // Waiting Buffer
+std::queue<Client*> ProgramState::waitingBuffer;
+
+// OptitrackCommunicator
+OptitrackCommunicator ProgramState::optitrackCommunicator;
+
+// Variables
+int ProgramState::srcBrickLayerIndex = 0;
+int ProgramState::dstBrickLayerIndex = 0;
+bool ProgramState::isWorking = false; // Current Program State
+bool ProgramState::isTerminationActivated; // Signal
+
+int ProgramState::connClientNum = 0;
+
 ProgramState::ProgramState() : thread_conn()
 {
 	brickLayerList = new BrickLayerList(&mtx_state, &cv_state);
 	grid = new Grid(&mtx_state, &cv_state);
 
-	ProgramState::isTerminationActivated = false;
-	ProgramState::isWorking = false;
-	ProgramState::connClientNum = 0;
-
-	ProgramState::maxClientNum = GetPrivateProfileInt("connection", "MAX_ROBOT_CONNECTED", 2, "../../../config/server.ini");
+	maxClientNum = GetPrivateProfileInt("connection", "MAX_ROBOT_CONNECTED", 2, "../config/server.ini");
 
 	clients = new Client*[ProgramState::maxClientNum];
 	for (int i = 0; i < ProgramState::maxClientNum; i++) {
 		clients[i] = new Client();
 	}
-
-	ProgramState::srcBrickLayerIndex = ProgramState::dstBrickLayerIndex = 0;
 
 	// Multi-Threading
 	thread_conn = std::thread(&ProgramState::optitrackConnect, this);
@@ -103,11 +111,11 @@ void ProgramState::optitrackConnect()
 			// Checking Current Client Number
 			if (ProgramState::connClientNum < ProgramState::maxClientNum) {
 				bool socketTerminated = false;
-				std::pair<int, std::pair<Position2D, Direction2D>> robotInfo;
+				std::pair<int, std::pair<Vector2D, Vector2D>> robotInfo;
 				while (true)
 				{
 					// Try Connection
-					std::pair<Position2D, Direction2D>* prevPoseArr = ProgramState::optitrackCommunicator.getPoseArray();
+					std::pair<Vector2D, Vector2D>* prevPoseArr = ProgramState::optitrackCommunicator.getPoseArray();
 
 					// Sending 'CAL' Instruction
 					SOCKET& sock = head->getSocket();
@@ -190,7 +198,7 @@ void ProgramState::workSession(Client* client)
 		// 1. Update Position Information
 		lck.lock();
 		Robot* robot = client->getRobot();
-		std::pair<Position2D, Direction2D> pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
+		std::pair<Vector2D, Vector2D> pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
 		robot->setPose(pose);
 		grid->repaint(brickLayerList, &optitrackCommunicator, clients);
 
@@ -198,9 +206,9 @@ void ProgramState::workSession(Client* client)
 		Brick *srcBrick, *dstBrick;
 		int bytes_send, bytes_recv;
 		SOCKET sock;
-		std::pair<Position2D, Direction2D> srcFinalPose, dstFinalPose;
-		std::pair<Position2D, Direction2D> keypoint, finalPose;
-		Position3D srcBrickPos, dstBrickPos;
+		std::pair<Vector2D, Vector2D> srcFinalPose, dstFinalPose;
+		std::pair<Vector2D, Vector2D> keypoint, finalPose;
+		Vector3D srcBrickPos, dstBrickPos;
 		float param[MAX_INST_PARAM];
 		char buff[MAX_BUFF_SIZE];
 
@@ -235,7 +243,7 @@ void ProgramState::workSession(Client* client)
 			finalPose = robot->getFinalPose();
 
 			// 2-2-1. Check if Current Pose == Final Pose: Send HLT, change phase to GRAB, and break
-			if (Position2D::isNearest(pose.first, finalPose.first) && Direction2D::isSimilar(pose.second, finalPose.second)) {
+			if (Vector2D::isNearest(pose.first, finalPose.first) && Vector2D::isSimilar(pose.second, finalPose.second)) {
 				// Send HLT
 				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
@@ -254,7 +262,7 @@ void ProgramState::workSession(Client* client)
 				break;
 			}
 			// 2-2-1-Extra. Check if Dist (Current Pose_Pos, Final Pose_Pos) <= GRID_SIZE: Send MVL Instruction
-			if (Position2D::isNear(pose.first, finalPose.first)) {
+			if (Vector2D::isNear(pose.first, finalPose.first)) {
 				param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
 
 				bytes_send = send(sock, Instruction(InstructionType::MVL, param).toString().c_str(), MAX_BUFF_SIZE, 0);
@@ -272,7 +280,7 @@ void ProgramState::workSession(Client* client)
 			}
 
 			// 2-2-2. Check if Current Pose == Keypoint: Send HLT, Pathfinding, Send PID, Receive DONE/ERROR, and break
-			if (Position2D::isNearest(pose.first, keypoint.first) && Direction2D::isSimilar(pose.second, keypoint.second)) { // Current Pose == Keypoint
+			if (Vector2D::isNearest(pose.first, keypoint.first) && Vector2D::isSimilar(pose.second, keypoint.second)) { // Current Pose == Keypoint
 				// Send HLT
 				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
@@ -416,7 +424,7 @@ void ProgramState::workSession(Client* client)
 			finalPose = robot->getFinalPose();
 
 			// 2-4-1. Check if Current Pose == Final Pose: Send HLT, and change phase to RLZ
-			if (Position2D::isNearest(pose.first, finalPose.first) && Direction2D::isSimilar(pose.second, finalPose.second)) { // Current Pose == Final Pose
+			if (Vector2D::isNearest(pose.first, finalPose.first) && Vector2D::isSimilar(pose.second, finalPose.second)) { // Current Pose == Final Pose
 				// Send HLT
 				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
@@ -437,7 +445,7 @@ void ProgramState::workSession(Client* client)
 			}
 
 			// 2-4-1-Extra. Check if Dist (Current Pose_Pos, Final Pose_Pos) <= GRID_SIZE: Send MVL Instruction
-			if (Position2D::isNear(pose.first, finalPose.first)) {
+			if (Vector2D::isNear(pose.first, finalPose.first)) {
 				param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
 
 				bytes_send = send(sock, Instruction(InstructionType::MVL, param).toString().c_str(), MAX_BUFF_SIZE, 0);
@@ -455,7 +463,7 @@ void ProgramState::workSession(Client* client)
 			}
 
 			// 2-4-2. Check if Current Pose == Keypoint: Send HLT, Send PID, Receive DONE/ERROR
-			if (Position2D::isNearest(pose.first, keypoint.first) && Direction2D::isSimilar(pose.second, keypoint.second)) { // Current Pose == Keypoint
+			if (Vector2D::isNearest(pose.first, keypoint.first) && Vector2D::isSimilar(pose.second, keypoint.second)) { // Current Pose == Keypoint
 				// Send HLT
 				sock = client->getSocket();
 				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);

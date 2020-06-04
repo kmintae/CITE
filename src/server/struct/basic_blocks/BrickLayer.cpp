@@ -38,7 +38,7 @@ std::vector<Brick*> &BrickLayer::getStackedList()
 
 void BrickLayer::markAsSelected(Brick* b)
 {
-	int bodysize = GetPrivateProfileInt("physical", "ROBOT_BODY_SIZE_MM", 0, "../../../config/server.ini");
+	int bodysize = GetPrivateProfileInt("physical", "ROBOT_BODY_SIZE_MM", 0, "../config/server.ini");
 
 	b->setAsSelected();
 	ongoingList.push_back(b);
@@ -51,12 +51,12 @@ void BrickLayer::markAsSelected(Brick* b)
 	for (int i = 0; i < brickList.size(); i++)
 		if (b->getPos3D() != brickList[i]->getPos3D())
 			if (b->getPhase() == BrickPhase::ENABLE)
-				if (Position2D::calculateDistance(b->getPos2D(), brickList[i]->getPos2D()) < bodysize)
+				if (Vector2D::calculateDistance(b->getPos2D(), brickList[i]->getPos2D()) < bodysize)
 					b->setAsUnable();
 }
 void BrickLayer::markAsDone(Brick* b)
 {
-	int bodysize = GetPrivateProfileInt("physical", "ROBOT_BODY_SIZE_MM", 0, "../../../config/server.ini");
+	int bodysize = GetPrivateProfileInt("physical", "ROBOT_BODY_SIZE_MM", 0, "../config/server.ini");
 
 	b->setAsDone();
 	stackedList.push_back(b);
@@ -69,7 +69,7 @@ void BrickLayer::markAsDone(Brick* b)
 	for (int i = 0; i < brickList.size(); i++)
 		if (b->getPos3D() != brickList[i]->getPos3D())
 			if (b->getPhase() == BrickPhase::ENABLE)
-				if (Position2D::calculateDistance(b->getPos2D(), brickList[i]->getPos2D()) < bodysize)
+				if (Vector2D::calculateDistance(b->getPos2D(), brickList[i]->getPos2D()) < bodysize)
 					b->setAsEnable();
 }
 

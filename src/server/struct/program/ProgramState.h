@@ -34,9 +34,7 @@
 #include "../states/BrickLayerList.h"
 #include "../states/Grid.h"
 
-#include "../vector/Direction.h"
-#include "../vector/Position.h"
-#include "../vector/Direction.h"
+#include "../vector/Vector.h"
 
 #define MAX_BUFF_SIZE 512
 
@@ -71,7 +69,8 @@ private:
 	static bool isWorking; // Current Program State
 	static bool isTerminationActivated; // Signal
 	
-	static int connClientNum, maxClientNum;
+	static int connClientNum;
+	int maxClientNum;
 
 public:
 	ProgramState();

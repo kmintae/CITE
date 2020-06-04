@@ -39,7 +39,7 @@ Brick* BrickLayerList::getNextSrcBrick(Robot* robot, int &srcBrickLayerIndex, st
 	// Searching by O(N)
 	// Considering LayerList
 	Brick* brick = NULL;
-	std::pair<Position2D, Direction2D> pose = robot->getPose();
+	std::pair<Vector2D, Vector2D> pose = robot->getPose();
 
 	while (true)
 	{
@@ -56,7 +56,7 @@ Brick* BrickLayerList::getNextSrcBrick(Robot* robot, int &srcBrickLayerIndex, st
 		float minDist = 999999999;
 		std::vector<Brick*> candidates = srcBrickLayerList[this->srcBrickLayerIndex]->getEnableBrickList();
 		for (int i = 0; i < candidates.size(); i++) {
-			float dist = Position2D::calculateDistance(pose.first, candidates[i]->getPos2D());
+			float dist = Vector2D::calculateDistance(pose.first, candidates[i]->getPos2D());
 			if (minDist > dist) {
 				minDist = dist;
 				brick = candidates[i];
@@ -73,7 +73,7 @@ Brick* BrickLayerList::getNextDstBrick(Robot* robot, int &dstBrickLayerIndex, st
 	// Searching by O(N)
 	// Considering LayerList
 	Brick* brick = NULL;
-	std::pair<Position2D, Direction2D> pose = robot->getPose();
+	std::pair<Vector2D, Vector2D> pose = robot->getPose();
 
 	while (true)
 	{
@@ -90,7 +90,7 @@ Brick* BrickLayerList::getNextDstBrick(Robot* robot, int &dstBrickLayerIndex, st
 		float minDist = 999999999;
 		std::vector<Brick*> candidates = dstBrickLayerList[this->dstBrickLayerIndex]->getEnableBrickList();
 		for (unsigned int i = 0; i < candidates.size(); i++) {
-			float dist = Position2D::calculateDistance(pose.first, candidates[i]->getPos2D());
+			float dist = Vector2D::calculateDistance(pose.first, candidates[i]->getPos2D());
 			if (minDist > dist) {
 				minDist = dist;
 				brick = candidates[i];
@@ -103,9 +103,9 @@ Brick* BrickLayerList::getNextDstBrick(Robot* robot, int &dstBrickLayerIndex, st
 	return brick;
 }
 
-std::pair<Position2D, Direction2D> BrickLayerList::getFinalPose(Grid* grid, Brick* brick, std::unique_lock<std::mutex>& lck)
+std::pair<Vector2D, Vector2D> BrickLayerList::getFinalPose(Grid* grid, Brick* brick, std::unique_lock<std::mutex>& lck)
 {
-	std::pair<Position2D, Direction2D> result;
+	std::pair<Vector2D, Vector2D> result;
 	// TODO: Get Final Pose w/ Grid & Brick Information
 	while (true)
 	{

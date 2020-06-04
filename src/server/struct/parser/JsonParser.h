@@ -19,9 +19,6 @@
 #include "../basic_blocks/Brick.h"
 #include "../basic_blocks/BrickLayer.h"
 
-#include "../vector/Position.h"
-#include "../vector/Direction.h"
-
 class JsonParser
 {
 private:

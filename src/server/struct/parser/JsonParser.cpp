@@ -42,7 +42,7 @@ JsonParser::JsonParser()
 	std::sort(dstBricks.begin(), dstBricks.end(), [](Brick* a, Brick* b) {return *a > *b;  });
 
 	char buf[512] = { 0. };
-	GetPrivateProfileString("brick", "HEIGHT_MM", "-1", buf, 512, "../../../config/server.ini");
+	GetPrivateProfileString("brick", "HEIGHT_MM", "-1", buf, 512, "../config/server.ini");
 	float brickHeight = atof(buf) - 0.1;
 
 	if (srcBricks.size() > 0) {

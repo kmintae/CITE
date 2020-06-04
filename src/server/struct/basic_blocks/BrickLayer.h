@@ -17,12 +17,11 @@
 #include "Phase.h"
 #include "Brick.h"
 
-#include "../vector/Position.h"
+#include "../vector/Vector.h"
 
 class BrickLayer
 {
 private:
-    Position2D layerCenter;
     std::vector<Brick*> brickList;
     std::vector<Brick*> readyList, ongoingList, stackedList;
 
