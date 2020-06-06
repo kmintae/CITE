@@ -18,7 +18,7 @@ Grid::Grid(std::mutex* mtx, std::condition_variable* cv)
 	limit_y = GetPrivateProfileInt("limit", "Y_MM", -1, "../config/server.ini");
 	grid_len = GetPrivateProfileInt("grid", "GRID_LEN_MM", 0, "../config/server.ini");
 
-	robotBorder = GetPrivateProfileInt("physical", "ROBOT_BODY_SIZE_MM", -1, "../config/server.ini");
+	robotBorder = 2 * GetPrivateProfileInt("physical", "ROBOT_BODY_SIZE_MM", -1, "../config/server.ini");
 	brickBorder = GetPrivateProfileInt("grid", "BRICK_GRID_MM", -1, "../config/server.ini");
 	errorLimit = GetPrivateProfileInt("error", "POS_LIMIT_MM", -1, "../config/server.ini");
 
@@ -76,7 +76,7 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 					l <= (((brickPos.x + brickBorder + 1) / grid_len <= (limit_x - 1) / grid_len) ? (brickPos.x + brickBorder + 1) / grid_len : (limit_x - 1) / grid_len);
 					l++) {
 					// TODO: (l,, k)) พฦดิ
-					Vector2D newVect = Vector2D(l * grid_len, k * grid_len);
+					Vector2D newVect = Vector2D(l * grid_len + grid_len / 2, k * grid_len + grid_len / 2);
 					if (Vector2D::calculateDistance(newVect, brickPos) < brickBorder) grid_bool[k][l] = true;
 				}
 			}
@@ -95,7 +95,7 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 				for (int l = (((brickPos.x - brickBorder - 1) / grid_len >= 0) ? (brickPos.x - brickBorder - 1) / grid_len : 0);
 					l <= (((brickPos.x + brickBorder + 1) / grid_len <= (limit_x - 1) / grid_len) ? (brickPos.x + brickBorder + 1) / grid_len : (limit_x - 1) / grid_len);
 					l++) {
-					Vector2D newVect = Vector2D(l * grid_len, k * grid_len);
+					Vector2D newVect = Vector2D(l * grid_len + grid_len / 2, k * grid_len + grid_len / 2);
 					if (Vector2D::calculateDistance(newVect, brickPos) < brickBorder) grid_bool[k][l] = true;
 				}
 			}
@@ -112,6 +112,8 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 		if (clients[i]->connectedHistory == false) continue;
 		Vector2D robotPos = poseArr[i].first;
 		Vector2D dir = poseArr[i].second;
+
+		// Callibration: Center of Wheels -> Optitrack
 		float x = robotPos.x-dir.x*centerError;
 		float y = robotPos.y - dir.y * centerError;
 		for (int k = (((y - robotBorder - 1) / grid_len >= 0) ? (y - robotBorder - 1) / grid_len : 0);
@@ -120,7 +122,7 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 			for (int l = (((x - robotBorder - 1) / grid_len >= 0) ? (x - robotBorder - 1) / grid_len : 0);
 				l <= (((x + robotBorder + 1) / grid_len <= (limit_x - 1) / grid_len) ? (x + robotBorder + 1) / grid_len : (limit_x - 1) / grid_len);
 				l++) {
-				Vector2D newVect = Vector2D(l * grid_len, k * grid_len);
+				Vector2D newVect = Vector2D(l * grid_len + grid_len / 2, k * grid_len + grid_len / 2);
 				if (Vector2D::calculateDistance(newVect, robotPos) < robotBorder) grid_bool[k][l] = true;
 			}
 		}
@@ -134,7 +136,8 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 			Robot* robot = clients[i]->getRobot();
 			if (robot->phase == RobotPhase::MOVING || robot->phase == RobotPhase::LIFTING) {
 				Vector2D pose = robot->getPose().first;
-
+				
+				// Callibration: Center of Wheels -> Optitrack
 				Vector2D dir = poseArr[i].second;
 				float x = pose.x - dir.x * centerError;
 				float y = pose.y - dir.y * centerError;
@@ -142,7 +145,7 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 
 				std::pair<Vector2D, Vector2D> keypoint = robot->getKeypoint();
 				
-				if (Vector2D::isNearest(pose_cal, keypoint.first) && Vector2D::isSimilar(dir, keypoint.second)) return;
+				if (Vector2D::isNearest(pose_cal, keypoint.first)) return;
 
 				// In CITD IV, We'll assume that Robot moves with 4 directions
 				// This can be modified by using: Rotation Transformation
@@ -178,7 +181,7 @@ void Grid::repaint(BrickLayerList* brickLayerList, OptitrackCommunicator* optitr
 					for (int l = (((keypoint.first.x - robotBorder - 1) / grid_len >= 0) ? (keypoint.first.x - robotBorder - 1) / grid_len : 0);
 						l <= (((keypoint.first.x + robotBorder + 1) / grid_len <= (limit_x - 1) / grid_len) ? (keypoint.first.x + robotBorder + 1) / grid_len : (limit_x - 1) / grid_len);
 						l++) {
-						Vector2D newVect = Vector2D(l * grid_len, k * grid_len);
+						Vector2D newVect = Vector2D(l * grid_len + grid_len / 2, k * grid_len + grid_len / 2);
 						if (Vector2D::calculateDistance(newVect, keypoint.first) < robotBorder) grid_bool[k][l] = true;
 					}
 				}

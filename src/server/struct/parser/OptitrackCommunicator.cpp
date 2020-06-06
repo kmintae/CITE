@@ -96,6 +96,7 @@ void OptitrackCommunicator::updateArray(std::string rawData)
 			GetPrivateProfileString("error", "CENTER_DIST", "-1", buf, 512, "../config/server.ini");
 			float centerError = atof(buf);
 
+			// Callibration: Optitrack -> Center of Wheels
 			Vector2D dir = Vector2D::radianToVector(theta);
 			OptitrackCommunicator::poseArr[ID].first.x = X+centerError*dir.x;
 			OptitrackCommunicator::poseArr[ID].first.y = Y+centerError*dir.y;
