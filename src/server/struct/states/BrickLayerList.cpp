@@ -109,11 +109,45 @@ Brick* BrickLayerList::getNextDstBrick(Robot* robot, int &dstBrickLayerIndex, st
 std::pair<Vector2D, Vector2D> BrickLayerList::getFinalPose(Grid* grid, Brick* brick, std::unique_lock<std::mutex>& lck)
 {
 	std::pair<Vector2D, Vector2D> result;
-	// TODO: Get Final Pose w/ Grid & Brick Information
+
+	int dist = GetPrivateProfileInt("calc", "GRAB_DIST", -1, "../config/server.ini");
+	// Get Final Pose w/ Grid & Brick Information
+	// Assumption: There are at least one position for releasing specific brick.
+	
+	Vector2D dirVector = brick->getDir2D();
+	Vector2D brickPos = brick->getPos2D();
+	Vector2D normVector = Vector2D(dirVector.y, -dirVector.x);
+
+	int gripperDist = GetPrivateProfileInt("physical", "GRIPPER_MM", 2, "../config/server.ini");
+
+	Vector2D grabCandi1 = brickPos - (dirVector * dist);
+	grabCandi1 -= (normVector * gripperDist);
+	Vector2D grabCandi2 = brickPos + (dirVector * dist);
+	grabCandi2 += (normVector * gripperDist);
+
+	// Check index-out-of-range
+	bool chk1 = true;
+	bool chk2 = true;
+
+	if (grabCandi1.x < 0 || grabCandi1.x >= grid->limit_x || grabCandi1.y < 0 || grabCandi1.y >= grid->limit_y) chk1 = false;
+	if (grabCandi2.x < 0 || grabCandi2.x >= grid->limit_x || grabCandi2.y < 0 || grabCandi2.y >= grid->limit_y) chk2 = false;
+
+	bool** grid_bool = grid->getGrid();
 	while (true)
-	{
-		break;
-		// TODO: If no finalpose exists, then *cv.wait(lck);
+	{	
+		// If no finalpose exists, then *cv.wait(lck);
+		// Assumption: + High Priority
+
+		if (chk2 == true)
+			if (grid_bool[(int)(grabCandi2.y / grid->grid_len)][(int)(grabCandi2.x / grid->grid_len)] == false)
+				return std::make_pair(grabCandi2, dirVector * -1);
+
+		if (chk1 == true)
+			if (grid_bool[(int)(grabCandi1.y / grid->grid_len)][(int)(grabCandi1.x / grid->grid_len)] == false)
+				return std::make_pair(grabCandi1, dirVector);
+
+
+		(*cv).wait(lck);
 	}
 	return result;
 }

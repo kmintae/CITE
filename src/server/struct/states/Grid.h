@@ -31,19 +31,18 @@ class BrickLayerList;
 class Grid
 {
 private:
-	int grid_len;
-	int limit_x, limit_y;
-	bool** grid_bool;
-	
-	int robotBorder, brickBorder;
-	int errorLimit;
-
 	int maxRobotNum;
 	std::mutex* mtx;
 	std::condition_variable* cv;
 
 public:
 	int x, y;
+	int grid_len;
+	int limit_x, limit_y;
+	bool** grid_bool;
+	int robotBorder, brickBorder;
+	int errorLimit;
+
 	Grid(std::mutex* mtx, std::condition_variable* cv);
 	~Grid();
 

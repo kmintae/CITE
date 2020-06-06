@@ -34,10 +34,10 @@ Instruction::Instruction(InstructionType instType, float* param)
 
 	// Server <-> Client
 	case InstructionType::GRB:
-		paramCnt = GRB_PARAM; // brickpos_x, brickpos_y, brickpos_z
+		paramCnt = GRB_PARAM; // r, z
 		break;
 	case InstructionType::RLZ:
-		paramCnt = RLZ_PARAM; //  brickpos_x, brickpos_y, brickpos_z
+		paramCnt = RLZ_PARAM; // r. z
 		break;
 	case InstructionType::PID:
 		paramCnt = PID_PARAM; // curPos, curDir, keypointPos, keypointDir

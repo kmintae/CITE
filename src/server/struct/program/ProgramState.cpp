@@ -21,6 +21,8 @@ bool ProgramState::isTerminationActivated = false; // Signal
 
 int ProgramState::connClientNum = 0;
 
+int ProgramState::rotationError = GetPrivateProfileInt("error", "ROTATE_ERROR", 2, "../config/server.ini");
+
 // Mutexes
 std::mutex ProgramState::mtx_state;
 std::condition_variable ProgramState::cv_state;
@@ -257,6 +259,8 @@ void ProgramState::workSession(Client* client)
 		float param[MAX_INST_PARAM];
 		char buff[MAX_BUFF_SIZE];
 
+		std::string inst;
+
 		switch (robot->phase)
 		{
 		case RobotPhase::STOP: // 2-1. STOP: Decision of srcBrick
@@ -264,7 +268,8 @@ void ProgramState::workSession(Client* client)
 
 			// All Jobs Done: Disconnect
 			if (srcBrick == NULL) {
-				bytes_send = send(sock, Instruction(InstructionType::DCN, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
+				inst = Instruction(InstructionType::DCN, NULL).toString();
+				bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 				}
@@ -294,7 +299,8 @@ void ProgramState::workSession(Client* client)
 			// 2-2-1. Check if Current Pose == Final Pose: Send HLT, change phase to GRAB, and break
 			if (Vector2D::isNearest(pose.first, finalPose.first) && Vector2D::isSimilar(pose.second, finalPose.second)) {
 				// Send HLT
-				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
+				inst = Instruction(InstructionType::HLT, NULL).toString();
+				bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 					
@@ -315,7 +321,8 @@ void ProgramState::workSession(Client* client)
 			if (Vector2D::isNear(pose.first, finalPose.first)) {
 				param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
 
-				bytes_send = send(sock, Instruction(InstructionType::MVL, param).toString().c_str(), MAX_BUFF_SIZE, 0);
+				inst = Instruction(InstructionType::MVL, param).toString();
+				bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
@@ -333,7 +340,8 @@ void ProgramState::workSession(Client* client)
 			// 2-2-2. Check if Current Pose == Keypoint: Send HLT, Pathfinding, Send PID, Receive DONE/ERROR, and break
 			if (Vector2D::isNearest(pose.first, keypoint.first) && Vector2D::isSimilar(pose.second, keypoint.second)) { // Current Pose == Keypoint
 				// Send HLT
-				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
+				inst = Instruction(InstructionType::HLT, NULL).toString();
+				bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
@@ -354,7 +362,8 @@ void ProgramState::workSession(Client* client)
 				param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
 				param[4] = keypoint.first.x; param[5] = keypoint.first.y; param[6] = keypoint.second.x; param[7] = keypoint.second.y;
 
-				bytes_send = send(sock, Instruction(InstructionType::PID, param).toString().c_str(), MAX_BUFF_SIZE, 0);
+				inst = Instruction(InstructionType::PID, param).toString();
+				bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
@@ -390,7 +399,8 @@ void ProgramState::workSession(Client* client)
 			// 2-2-3. Send 'MOV' Instruction
 			param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
 
-			bytes_send = send(sock, Instruction(InstructionType::MOV, param).toString().c_str(), MAX_BUFF_SIZE, 0);
+			inst = Instruction(InstructionType::MOV, param).toString();
+			bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 			if (bytes_send == SOCKET_ERROR) {
 				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
@@ -416,7 +426,8 @@ void ProgramState::workSession(Client* client)
 			// Send GRB
 			param[0] = srcBrickPos.x; param[1] = srcBrickPos.y; param[2] = srcBrickPos.z;
 
-			bytes_send = send(sock, Instruction(InstructionType::GRB, param).toString().c_str(), MAX_BUFF_SIZE, 0);
+			inst = Instruction(InstructionType::GRB, param).toString();
+			bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 			if (bytes_send == SOCKET_ERROR) {
 				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
@@ -455,7 +466,10 @@ void ProgramState::workSession(Client* client)
 
 			// All Jobs Done: Disconnect
 			if (srcBrick == NULL) {
-				bytes_send = send(sock, Instruction(InstructionType::DCN, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
+				// FIX
+
+				inst = Instruction(InstructionType::DCN, NULL).toString();
+				bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 				}
@@ -484,7 +498,8 @@ void ProgramState::workSession(Client* client)
 			// 2-4-1. Check if Current Pose == Final Pose: Send HLT, and change phase to RLZ
 			if (Vector2D::isNearest(pose.first, finalPose.first) && Vector2D::isSimilar(pose.second, finalPose.second)) { // Current Pose == Final Pose
 				// Send HLT
-				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
+				inst = Instruction(InstructionType::HLT, NULL).toString();
+				bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
@@ -507,7 +522,8 @@ void ProgramState::workSession(Client* client)
 			if (Vector2D::isNear(pose.first, finalPose.first)) {
 				param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
 
-				bytes_send = send(sock, Instruction(InstructionType::MVL, param).toString().c_str(), MAX_BUFF_SIZE, 0);
+				inst = Instruction(InstructionType::MVL, param).toString();
+				bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
@@ -525,7 +541,8 @@ void ProgramState::workSession(Client* client)
 			// 2-4-2. Check if Current Pose == Keypoint: Send HLT, Send PID, Receive DONE/ERROR
 			if (Vector2D::isNearest(pose.first, keypoint.first) && Vector2D::isSimilar(pose.second, keypoint.second)) { // Current Pose == Keypoint
 				// Send HLT
-				bytes_send = send(sock, Instruction(InstructionType::HLT, NULL).toString().c_str(), MAX_BUFF_SIZE, 0);
+				inst = Instruction(InstructionType::HLT, NULL).toString();
+				bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
@@ -547,7 +564,8 @@ void ProgramState::workSession(Client* client)
 				param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
 				param[4] = keypoint.first.x; param[5] = keypoint.first.y; param[6] = keypoint.second.x; param[7] = keypoint.second.y;
 
-				bytes_send = send(sock, Instruction(InstructionType::PID, param).toString().c_str(), MAX_BUFF_SIZE, 0);
+				inst = Instruction(InstructionType::PID, param).toString();
+				bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 				if (bytes_send == SOCKET_ERROR) {
 					fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
@@ -582,8 +600,8 @@ void ProgramState::workSession(Client* client)
 
 			// 2-4-3. Send 'MOV' Instruction
 			param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
-
-			bytes_send = send(sock, Instruction(InstructionType::MOV, param).toString().c_str(), MAX_BUFF_SIZE, 0);
+			inst = Instruction(InstructionType::MOV, param).toString();
+			bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 			if (bytes_send == SOCKET_ERROR) {
 				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
@@ -606,8 +624,8 @@ void ProgramState::workSession(Client* client)
 
 			param[0] = dstBrickPos.x; param[1] = dstBrickPos.y; param[2] = dstBrickPos.z;
 			lck.unlock();
-
-			bytes_send = send(sock, Instruction(InstructionType::RLZ, param).toString().c_str(), MAX_BUFF_SIZE, 0);
+			inst = Instruction(InstructionType::RLZ, param).toString();
+			bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 			if (bytes_send == SOCKET_ERROR) {
 				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
 
@@ -658,6 +676,7 @@ void ProgramState::workSession(Client* client)
 // Print Grid
 void ProgramState::printGrid()
 {
+	/*
 	while (true) {
 		std::unique_lock<std::mutex> lck(ProgramState::mtx_state);
 
@@ -676,6 +695,7 @@ void ProgramState::printGrid()
 		// Sleep for 0.1s
 		Sleep(100);
 	}
+	*/
 }
 
 // Emergency Stop
@@ -710,22 +730,27 @@ void ProgramState::workSession_Test(Client* client)
 	robot->setPose(pose);
 	ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
 
-	// 2. Three KeyPoints
-	std::pair<Vector2D, Vector2D> keypoint1 = std::make_pair(Vector2D(600, pose.first.y), pose.second);
-	Vector2D newDir = Vector2D::radianToVector(Vector2D::vectorToRadian(pose.second) + 3.141592 / 2);
-	std::pair<Vector2D, Vector2D> keypoint2 = std::make_pair(Vector2D(600, pose.first.y), newDir);
-	std::pair<Vector2D, Vector2D> keypoint3 = std::make_pair(Vector2D(600, 1800), newDir);
+	// 2. Brick
+	Brick* brick = new Brick();
+	brick->setPos(864.59, 388.53, 13.5);
+	brick->setDir(0, 1, 0);
+	std::pair<Vector2D, Vector2D> finalPose = ProgramState::brickLayerList->getFinalPose(ProgramState::grid, brick, lck);
+	robot->markAsMove(brick, finalPose);
+
+	// 3. Three KeyPoints
+	std::pair<Vector2D, Vector2D> keypoint1 = std::make_pair(Vector2D(finalPose.first.x, pose.first.y), pose.second);
+	Vector2D newDir = Vector2D(0, -1);
+	// std::pair<Vector2D, Vector2D> keypoint2 = std::make_pair(Vector2D(600, pose.first.y), newDir);
+	// std::pair<Vector2D, Vector2D> keypoint3 = std::make_pair(Vector2D(600, 1800), newDir);
 
 	int bytes_send, bytes_recv;
 	SOCKET sock = client->getSocket();
 	float param[MAX_INST_PARAM];
 	char buff[MAX_BUFF_SIZE] = { 0, };
 
-
 	// Send SET
-	param[0] = 2.0; param[1] = 1.5; param[2] = 2; param[3] = 10;
-	param[4] = 2.0; param[5] = 1.5; param[6] = 2; param[7] = 10;
-
+	param[0] =0.15; param[1] = 0.036; param[2] = 0.0006; param[3] = 40;
+	param[4] = 0.5; param[5] = 0.6 ; param[6] = 0.65; param[7] = 10; //0.0021
 	lck.unlock();
 	std::string inst;
 	
@@ -757,7 +782,7 @@ void ProgramState::workSession_Test(Client* client)
 		ProgramState::connClientNum--;
 		return;
 	}
-
+	
 	// Send PID
 	lck.lock();
 	pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
@@ -769,6 +794,193 @@ void ProgramState::workSession_Test(Client* client)
 	lck.unlock();
 
 	inst = Instruction(InstructionType::PID, param).toString();
+	bytes_send = send(sock, inst.c_str(), inst.length(), 0);
+	if (bytes_send == SOCKET_ERROR) {	
+		fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
+
+		lck.lock();
+		delete client; // closeSocket + De-allocation
+		client = new Client();
+		client->connectedHistory = true;
+		ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+		ProgramState::connClientNum--;
+		return;
+	}
+
+	// Receive DONE/ERROR
+	std::fill_n(buff, MAX_BUFF_SIZE, 0);
+	bytes_recv = recv(sock, buff, MAX_BUFF_SIZE, 0);
+	if (bytes_recv == SOCKET_ERROR) {
+		fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
+
+		lck.lock();
+		delete client; // closeSocket + De-allocation
+		client = new Client();
+		client->connectedHistory = true;
+		ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+		ProgramState::connClientNum--;
+		return;
+	}
+	
+	bool isFirst = true;
+	std::pair<Vector2D, Vector2D> initialPose;
+
+	std::pair<Vector2D, Vector2D> keypointArr[4] = {
+		keypoint1,
+		std::make_pair(Vector2D(finalPose.first.x, pose.first.y), newDir ),
+		std::make_pair(Vector2D(finalPose.first.x, finalPose.first.y), newDir ),
+		std::make_pair(Vector2D(finalPose.first.x, finalPose.first.y), finalPose.second)
+	};
+	
+	printf("FinalPose : %s, %s\n", finalPose.first.toString().c_str(), finalPose.second.toString().c_str());
+
+	for (int i = 0; i < 4; i++) {
+		std::pair<Vector2D, Vector2D> keypoint = keypointArr[i];
+		isFirst = true;
+
+		if (i < 4) {
+			// Send PID
+			pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
+			robot->setPose(pose);
+			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+
+			param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
+			param[4] = keypoint.first.x; param[5] = keypoint.first.y; param[6] = keypoint.second.x; param[7] = keypoint.second.y;
+
+			inst = Instruction(InstructionType::PID, param).toString();
+			bytes_send = send(sock, inst.c_str(), inst.length(), 0);
+			if (bytes_send == SOCKET_ERROR) {
+				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
+
+				delete client; // closeSocket + De-allocation
+				client = new Client();
+				client->connectedHistory = true;
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+				ProgramState::connClientNum--;
+				return;
+			}
+
+			// Receive DONE/ERROR
+			std::fill_n(buff, MAX_BUFF_SIZE, 0);
+			bytes_recv = recv(sock, buff, MAX_BUFF_SIZE, 0);
+			if (bytes_recv == SOCKET_ERROR) {
+				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
+
+				delete client; // closeSocket + De-allocation
+				client = new Client();
+				client->connectedHistory = true;
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+				ProgramState::connClientNum--;
+				return;
+			}
+		}
+		else {
+			// 원래는 Brick 관련 설정
+		}
+
+		while (true)
+		{
+			lck.lock();
+			robot = client->getRobot();
+			pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
+			robot->setPose(pose);
+			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+
+			printf("[Init] Pos: %s , Dir: %s\n", initialPose.first.toString().c_str(), initialPose.second.toString().c_str());
+			printf("[pose] Pos: %s , Dir: %s\n", pose.first.toString().c_str(), pose.second.toString().c_str());
+			printf("[key1] Pos: %s , Dir: %s\n", keypoint.first.toString().c_str(), keypoint.second.toString().c_str());
+
+			if (isFirst) {
+				isFirst = false;
+				initialPose = pose;
+			}
+			bool rotate = ! Vector2D::calculateDistance(initialPose.first, keypoint.first) > ProgramState::rotationError;
+
+			if (Vector2D::isNearest(pose.first, keypoint.first)||rotate)
+			{
+				if ( !rotate|| Vector2D::isSimilar(pose.second, keypoint.second)) {
+					// Send HLT
+					inst = Instruction(InstructionType::HLT, NULL).toString();
+					bytes_send = send(sock, inst.c_str(), inst.length(), 0);
+					if (bytes_send == SOCKET_ERROR) {
+						fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
+
+						delete client; // closeSocket + De-allocation
+						client = new Client();
+						client->connectedHistory = true;
+						ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+						ProgramState::connClientNum--;
+						return;
+					}
+					// Receive DONE/ERROR
+					std::fill_n(buff, MAX_BUFF_SIZE, 0);
+					bytes_recv = recv(sock, buff, MAX_BUFF_SIZE, 0);
+					if (bytes_recv == SOCKET_ERROR) {
+						fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
+
+						delete client; // closeSocket + De-allocation
+						client = new Client();
+						client->connectedHistory = true;
+						ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+						ProgramState::connClientNum--;
+						return;
+					}
+					
+					ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+					lck.unlock();
+					break;
+				}
+			}
+
+			// MOV or MVL
+			param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
+
+			if (Vector2D::calculateDistance(initialPose.first, keypoint.first) > ProgramState::rotationError) inst = Instruction(InstructionType::MOV, param).toString();
+			else inst = Instruction(InstructionType::MVL, param).toString();
+
+			bytes_send = send(sock, inst.c_str(), inst.length(), 0);
+			if (bytes_send == SOCKET_ERROR) {
+				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
+
+				delete client; // closeSocket + De-allocation
+				client = new Client();
+				client->connectedHistory = true;
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+				ProgramState::connClientNum--;
+				return;
+			}
+			// Receive DONE/ERROR
+			std::fill_n(buff, MAX_BUFF_SIZE, 0);
+			bytes_recv = recv(sock, buff, MAX_BUFF_SIZE, 0);
+			if (bytes_recv == SOCKET_ERROR) {
+				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
+
+				delete client; // closeSocket + De-allocation
+				client = new Client();
+				client->connectedHistory = true;
+				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+				ProgramState::connClientNum--;
+				return;
+			}
+			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+			lck.unlock();
+			Sleep(10);
+		}
+		Sleep(10000);
+	}
+
+	// Send GRB
+	Vector3D brickPos = brick->getPos3D();
+
+	lck.lock();
+	pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
+	robot->setPose(pose);
+	ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+	param[0] = sqrt(pow(Vector2D::calculateDistance(brickPos.getVect2D(), pose.first), 2.0) + brickPos.z * brickPos.z);
+	param[1] = brickPos.z;
+	lck.unlock();
+
+	inst = Instruction(InstructionType::GRB, param).toString();
 	bytes_send = send(sock, inst.c_str(), inst.length(), 0);
 	if (bytes_send == SOCKET_ERROR) {
 		fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
@@ -797,221 +1009,44 @@ void ProgramState::workSession_Test(Client* client)
 		return;
 	}
 
-	while (true)
-	{
+	Sleep(10000);
+
+	lck.lock();
+	pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
+	robot->setPose(pose);
+	ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
+	param[0] = sqrt(pow(Vector2D::calculateDistance(brickPos.getVect2D(), pose.first), 2.0) + brickPos.z * brickPos.z);
+	param[1] = brickPos.z;
+	lck.unlock();
+
+	inst = Instruction(InstructionType::RLZ, param).toString();
+	bytes_send = send(sock, inst.c_str(), inst.length(), 0);
+	if (bytes_send == SOCKET_ERROR) {
+		fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
+
 		lck.lock();
-		robot = client->getRobot();
-		pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
-		robot->setPose(pose);
+		delete client; // closeSocket + De-allocation
+		client = new Client();
+		client->connectedHistory = true;
 		ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-
-		if (Vector2D::isNearest(pose.first, keypoint1.first) && Vector2D::isSimilar(pose.second, keypoint1.second))
-		{
-			// Send HLT
-			inst = Instruction(InstructionType::HLT, NULL).toString();
-			bytes_send = send(sock, inst.c_str(), inst.length(), 0);
-			if (bytes_send == SOCKET_ERROR) {
-				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
-
-				delete client; // closeSocket + De-allocation
-				client = new Client();
-				client->connectedHistory = true;
-				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-				ProgramState::connClientNum--;
-				return;
-			}
-
-			// Send PID
-			pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
-			robot->setPose(pose);
-			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-
-			param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
-			param[4] = keypoint2.first.x; param[5] = keypoint2.first.y; param[6] = keypoint2.second.x; param[7] = keypoint2.second.y;
-
-			inst = Instruction(InstructionType::PID, param).toString();
-			bytes_send = send(sock, inst.c_str(), inst.length(), 0);
-			if (bytes_send == SOCKET_ERROR) {
-				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
-
-				delete client; // closeSocket + De-allocation
-				client = new Client();
-				client->connectedHistory = true;
-				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-				ProgramState::connClientNum--;
-				return;
-			}
-
-			// Receive DONE/ERROR
-			std::fill_n(buff, MAX_BUFF_SIZE, 0);
-			bytes_recv = recv(sock, buff, MAX_BUFF_SIZE, 0);
-			if (bytes_recv == SOCKET_ERROR) {
-				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
-
-				delete client; // closeSocket + De-allocation
-				client = new Client();
-				client->connectedHistory = true;
-				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-				ProgramState::connClientNum--;
-				return;
-			}
-			break;
-		}
-
-		// MOV
-		param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
-
-		inst = Instruction(InstructionType::MOV, param).toString();
-		bytes_send = send(sock, inst.c_str(), inst.length(), 0);
-		if (bytes_send == SOCKET_ERROR) {
-			fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
-
-			delete client; // closeSocket + De-allocation
-			client = new Client();
-			client->connectedHistory = true;
-			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-			ProgramState::connClientNum--;
-			return;
-		}
-		// Receive DONE/ERROR
-		std::fill_n(buff, MAX_BUFF_SIZE, 0);
-		bytes_recv = recv(sock, buff, MAX_BUFF_SIZE, 0);
-		if (bytes_recv == SOCKET_ERROR) {
-			fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
-
-			delete client; // closeSocket + De-allocation
-			client = new Client();
-			client->connectedHistory = true;
-			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-			ProgramState::connClientNum--;
-			return;
-		}
-		ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-		lck.unlock();
-		Sleep(0.1);
+		ProgramState::connClientNum--;
+		return;
 	}
 
-	while (true)
-	{
+	// Receive DONE/ERROR
+	std::fill_n(buff, MAX_BUFF_SIZE, 0);
+	bytes_recv = recv(sock, buff, MAX_BUFF_SIZE, 0);
+	if (bytes_recv == SOCKET_ERROR) {
+		fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
+
 		lck.lock();
-		robot = client->getRobot();
-		pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
-		robot->setPose(pose);
+		delete client; // closeSocket + De-allocation
+		client = new Client();
+		client->connectedHistory = true;
 		ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-
-		if (Vector2D::isNearest(pose.first, keypoint2.first) && Vector2D::isSimilar(pose.second, keypoint2.second))
-		{
-			// Send HLT
-			inst = Instruction(InstructionType::HLT, NULL).toString();
-			bytes_send = send(sock, inst.c_str(), inst.length(), 0);
-			if (bytes_send == SOCKET_ERROR) {
-				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
-
-				delete client; // closeSocket + De-allocation
-				client = new Client();
-				client->connectedHistory = true;
-				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-				ProgramState::connClientNum--;
-				return;
-			}
-
-			// Send PID
-			pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
-			robot->setPose(pose);
-			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-
-			param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
-			param[4] = keypoint3.first.x; param[5] = keypoint3.first.y; param[6] = keypoint3.second.x; param[7] = keypoint3.second.y;
-			inst = Instruction(InstructionType::PID, param).toString();
-			bytes_send = send(sock, inst.c_str(), inst.length(), 0);
-			if (bytes_send == SOCKET_ERROR) {
-				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
-
-				delete client; // closeSocket + De-allocation
-				client = new Client();
-				client->connectedHistory = true;
-				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-				ProgramState::connClientNum--;
-				return;
-			}
-
-			// Receive DONE/ERROR
-			std::fill_n(buff, MAX_BUFF_SIZE, 0);
-			bytes_recv = recv(sock, buff, MAX_BUFF_SIZE, 0);
-			if (bytes_recv == SOCKET_ERROR) {
-				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
-
-				delete client; // closeSocket + De-allocation
-				client = new Client();
-				client->connectedHistory = true;
-				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-				ProgramState::connClientNum--;
-				return;
-			}
-			break;
-		}
-
-		// MOV
-		param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
-
-		inst = Instruction(InstructionType::MOV, param).toString();
-		bytes_send = send(sock, inst.c_str(), inst.length(), 0);
-		if (bytes_send == SOCKET_ERROR) {
-			fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
-
-			delete client; // closeSocket + De-allocation
-			client = new Client();
-			client->connectedHistory = true;
-			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-			ProgramState::connClientNum--;
-			return;
-		}
-		ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-		lck.unlock();
+		ProgramState::connClientNum--;
+		return;
 	}
 
-	while (true)
-	{
-		lck.lock();
-		robot = client->getRobot();
-		pose = ProgramState::optitrackCommunicator.getPose(robot->getRobotNum());
-		robot->setPose(pose);
-		ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-
-		if (Vector2D::isNearest(pose.first, keypoint3.first) && Vector2D::isSimilar(pose.second, keypoint3.second))
-		{
-			// Send HLT
-			inst = Instruction(InstructionType::HLT, NULL).toString();
-			bytes_send = send(sock, inst.c_str(), inst.length(), 0);
-			if (bytes_send == SOCKET_ERROR) {
-				fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
-
-				delete client; // closeSocket + De-allocation
-				client = new Client();
-				client->connectedHistory = true;
-				ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-				ProgramState::connClientNum--;
-				return;
-			}
-			break;
-		}
-
-		// MOV
-		param[0] = pose.first.x; param[1] = pose.first.y; param[2] = pose.second.x; param[3] = pose.second.y;
-
-		inst = Instruction(InstructionType::MOV, param).toString();
-		bytes_send = send(sock, inst.c_str(), inst.length(), 0);
-		if (bytes_send == SOCKET_ERROR) {
-			fprintf(stderr, "Send Failed, Termination of Socket Connection\n");
-
-			delete client; // closeSocket + De-allocation
-			client = new Client();
-			client->connectedHistory = true;
-			ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-			ProgramState::connClientNum--;
-			return;
-		}
-		ProgramState::grid->repaint(ProgramState::brickLayerList, &ProgramState::optitrackCommunicator, ProgramState::clients);
-		lck.unlock();
-	}
+	printf("End\n");
 }

@@ -92,10 +92,13 @@ void OptitrackCommunicator::updateArray(std::string rawData)
 			std::getline(ss2, theta_s, ' ');
 			theta = stof(theta_s);
 			
-			OptitrackCommunicator::poseArr[ID].first.x = X;
-			OptitrackCommunicator::poseArr[ID].first.y = Y;
+			char buf[512] = { 0. };
+			GetPrivateProfileString("error", "CENTER_DIST", "-1", buf, 512, "../config/server.ini");
+			float centerError = atof(buf);
 
 			Vector2D dir = Vector2D::radianToVector(theta);
+			OptitrackCommunicator::poseArr[ID].first.x = X+centerError*dir.x;
+			OptitrackCommunicator::poseArr[ID].first.y = Y+centerError*dir.y;
 			OptitrackCommunicator::poseArr[ID].second = dir;
 		}
 	}

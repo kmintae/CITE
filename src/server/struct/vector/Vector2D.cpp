@@ -80,9 +80,12 @@ bool Vector2D::isSimilar(const Vector2D& vect1, const Vector2D& vect2) // Direct
 	float theta1 = Vector2D::vectorToRadian(vect1);
 	float theta2 = Vector2D::vectorToRadian(vect2);
 
-	float theta = ((theta1 - theta2 < 0) ? theta1 + 360.0 - theta2 : theta1 - theta2);
-	
-	return theta < Vector2D::dirLimit;
+	float theta = (theta1 - theta2);
+	float diff = abs(theta);
+	if (diff > 180.0) {
+		diff = 360 - diff;
+	}
+	return (diff < Vector2D::dirLimit);
 }
 bool Vector2D::isNearest(const Vector2D& vect1, const Vector2D& vect2) // Position Distance Comparison
 {

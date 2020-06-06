@@ -75,6 +75,8 @@ private:
 	static int connClientNum;
 	static int maxClientNum;
 
+	static int rotationError;
+
 public:
 	ProgramState();
 	~ProgramState();

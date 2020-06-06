@@ -18,7 +18,7 @@ Client::Client()
 Client::~Client()
 {
 	if (robot != NULL) delete robot;
-	closesocket(sock);
+	// closesocket(sock);
 }
 
 void Client::accept(SOCKET& sock, SOCKADDR_IN& sock_in)

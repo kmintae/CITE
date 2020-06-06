@@ -16,8 +16,8 @@
 #define MOV_PARAM 4
 #define MVL_PARAM 4
 #define PID_PARAM 8
-#define GRB_PARAM 3
-#define RLZ_PARAM 3
+#define GRB_PARAM 2
+#define RLZ_PARAM 2
 #define DCN_PARAM 0
 
  // For Tests
